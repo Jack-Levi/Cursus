@@ -7,7 +7,6 @@ const state = {
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
-  // Inicialización de pestañas del panel lateral
   setupTabs();
 
   try {
@@ -18,15 +17,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       state.shift = data.shift;
     }
   } catch (e) {
-    console.warn("Error cargando configuración remota. Utilizando valores locales.", e);
+    console.warn("Utilizando configuración local de respaldo.", e);
   }
 
   updateHeaderAndHubUI();
-
-  // Inicializar mapa de Leaflet
   initMap(state.hub.lat, state.hub.lon);
 
-  // Vincular eventos de formularios
   document.getElementById("btn-add-address").addEventListener("click", handleAddAddress);
   document.getElementById("input-address").addEventListener("keypress", (e) => {
     if (e.key === "Enter") handleAddAddress();
@@ -36,7 +32,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("btn-run-simulation").addEventListener("click", runSimulation);
   document.getElementById("btn-dock-view-metrics").addEventListener("click", () => switchTab("results"));
 
-  // Eventos de cambios en parámetros
   document.getElementById("input-shift-hours").addEventListener("change", (e) => {
     state.shift.max_hours = parseFloat(e.target.value) || 8.0;
     updateHeaderAndHubUI();
@@ -48,12 +43,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     state.shift.buffer_time_min = parseFloat(e.target.value) || 15.0;
   });
 
-  // Toggles de rutas
   document.getElementById("toggle-ga").addEventListener("change", (e) => toggleRouteLayer("GA", e.target.checked));
   document.getElementById("toggle-pso").addEventListener("change", (e) => toggleRouteLayer("PSO", e.target.checked));
   document.getElementById("toggle-aco").addEventListener("change", (e) => toggleRouteLayer("ACO", e.target.checked));
 
-  // Cargar órdenes iniciales
   generateSampleOrders();
 });
 
@@ -132,7 +125,7 @@ async function handleAddAddress() {
 
   const btn = document.getElementById("btn-add-address");
   const originalText = btn.innerText;
-  btn.innerText = "Buscando...";
+  btn.innerText = "Consultando...";
   btn.disabled = true;
 
   try {
@@ -243,11 +236,13 @@ function updateOrdersUI() {
   state.orders.forEach((o, idx) => {
     const li = document.createElement("li");
     li.className = "order-card-row";
+    const label = (idx + 1) < 10 ? `0${idx + 1}` : `${idx + 1}`;
+
     li.innerHTML = `
-      <div class="order-badge-num">${idx + 1}</div>
+      <div class="order-badge-num font-mono">${label}</div>
       <div class="order-main-info">
         <div class="order-address-text" title="${o.address}">${o.address}</div>
-        <div class="order-meta-text">${o.lat.toFixed(4)}, ${o.lon.toFixed(4)} · ${o.service_time_min}m de entrega</div>
+        <div class="order-meta-text font-mono">${o.lat.toFixed(4)}, ${o.lon.toFixed(4)} · ${o.service_time_min}m entrega</div>
       </div>
       <button type="button" class="order-delete-btn" onclick="removeOrder(${idx})" aria-label="Eliminar orden ${idx + 1}">&times;</button>
     `;
@@ -313,37 +308,29 @@ function renderSimulationResults(data) {
   document.getElementById("results-content").style.display = "block";
   document.getElementById("btn-dock-view-metrics").style.display = "inline-flex";
 
-  // Actualizar resumen superior de métricas
   const bestAlgo = data.best_algorithm_by_distance;
   const bestRes = results[bestAlgo];
   document.getElementById("stat-best-distance").innerText = `${bestAlgo} (${bestRes.total_distance_km} km)`;
   document.getElementById("stat-fulfillment").innerText = `${bestRes.orders_delivered} de ${bestRes.orders_delivered + bestRes.orders_dropped} órdenes`;
 
-  document.getElementById("dock-status-message").innerText = `Optimización completada. Mejor ruta: ${bestAlgo} con ${bestRes.total_distance_km} km (${bestRes.total_time_hours} hrs)`;
+  document.getElementById("dock-status-message").innerText = `Ruta óptima: ${bestAlgo} con ${bestRes.total_distance_km} km en ${bestRes.total_time_hours} hrs`;
 
-  // Tarjetas verticales de cada algoritmo
   renderSideMetricCard("side-card-ga", results.GA, bestAlgo === "GA");
   renderSideMetricCard("side-card-pso", results.PSO, bestAlgo === "PSO");
   renderSideMetricCard("side-card-aco", results.ACO, bestAlgo === "ACO");
 
-  // Etiquetas de km en el overlay del mapa
   document.getElementById("pill-km-ga").innerText = `${results.GA.total_distance_km} km`;
   document.getElementById("pill-km-pso").innerText = `${results.PSO.total_distance_km} km`;
   document.getElementById("pill-km-aco").innerText = `${results.ACO.total_distance_km} km`;
 
-  // Trazar rutas
   clearRoutes();
-  drawRoute(routeLayerGA, results.GA.route_polyline, "#0284c7", 3.5);
-  drawRoute(routeLayerPSO, results.PSO.route_polyline, "#059669", 3.5, "6, 6");
-  drawRoute(routeLayerACO, results.ACO.route_polyline, "#d97706", 3.5, "2, 6");
+  drawRoute(routeLayerGA, results.GA.route_polyline, "#38BDF8", 3.2);
+  drawRoute(routeLayerPSO, results.PSO.route_polyline, "#34D399", 3.2, "6, 6");
+  drawRoute(routeLayerACO, results.ACO.route_polyline, "#FBBF24", 3.2, "2, 6");
 
-  // Curva de convergencia
   renderConvergenceChart(results);
-
-  // Itinerario de paradas
   renderScheduleTimeline(bestRes);
 
-  // Cambiar a la pestaña de métricas para mostrar el reporte
   switchTab("results");
 }
 
@@ -352,23 +339,23 @@ function renderSideMetricCard(containerId, res, isOptimal) {
   container.innerHTML = `
     <div class="card-top">
       <span class="card-algo-name">${res.name}</span>
-      ${isOptimal ? '<span class="badge-winner">Menor Distancia</span>' : ''}
+      ${isOptimal ? '<span class="badge-winner font-mono">ÓPTIMO</span>' : ''}
     </div>
-    <div class="metric-grid-2x2">
+    <div class="metric-grid-2x2 font-mono">
       <div class="m-item">
-        <span class="m-label">Distancia:</span>
+        <span class="m-label">Distancia</span>
         <span class="m-data">${res.total_distance_km} km</span>
       </div>
       <div class="m-item">
-        <span class="m-label">Tiempo Total:</span>
+        <span class="m-label">Tiempo Total</span>
         <span class="m-data">${res.total_time_hours} hrs</span>
       </div>
       <div class="m-item">
-        <span class="m-label">Completadas:</span>
+        <span class="m-label">Entregadas</span>
         <span class="m-data">${res.orders_delivered} / ${res.orders_delivered + res.orders_dropped}</span>
       </div>
       <div class="m-item">
-        <span class="m-label">Cómputo:</span>
+        <span class="m-label">Cómputo</span>
         <span class="m-data">${res.execution_time_sec} s</span>
       </div>
     </div>
@@ -397,25 +384,25 @@ function renderConvergenceChart(results) {
         {
           label: "GA",
           data: gaData,
-          borderColor: "#0284c7",
+          borderColor: "#38BDF8",
           backgroundColor: "transparent",
-          borderWidth: 1.8,
+          borderWidth: 1.5,
           pointRadius: 0
         },
         {
           label: "PSO",
           data: psoData,
-          borderColor: "#059669",
+          borderColor: "#34D399",
           backgroundColor: "transparent",
-          borderWidth: 1.8,
+          borderWidth: 1.5,
           pointRadius: 0
         },
         {
           label: "ACO",
           data: acoData,
-          borderColor: "#d97706",
+          borderColor: "#FBBF24",
           backgroundColor: "transparent",
-          borderWidth: 1.8,
+          borderWidth: 1.5,
           pointRadius: 0
         }
       ]
@@ -427,19 +414,23 @@ function renderConvergenceChart(results) {
       plugins: {
         legend: {
           position: "top",
-          labels: { color: "#cbd5e1", font: { size: 9 }, boxWidth: 12 }
+          labels: {
+            color: "#8E9299",
+            font: { family: "'JetBrains Mono', monospace", size: 9 },
+            boxWidth: 10
+          }
         }
       },
       scales: {
         x: {
           title: { display: false },
-          ticks: { color: "#64748b", font: { size: 8 } },
-          grid: { color: "#243048" }
+          ticks: { color: "#5A5E66", font: { family: "'JetBrains Mono', monospace", size: 8 } },
+          grid: { color: "rgba(255, 255, 255, 0.05)" }
         },
         y: {
           title: { display: false },
-          ticks: { color: "#64748b", font: { size: 8 } },
-          grid: { color: "#243048" }
+          ticks: { color: "#5A5E66", font: { family: "'JetBrains Mono', monospace", size: 8 } },
+          grid: { color: "rgba(255, 255, 255, 0.05)" }
         }
       }
     }
@@ -465,10 +456,11 @@ function renderScheduleTimeline(bestRes) {
     const hours = Math.floor(stop.arrival_time_min / 60);
     const mins = Math.floor(stop.arrival_time_min % 60);
     const timeFormatted = `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+    const num = (i + 1) < 10 ? `0${i + 1}` : `${i + 1}`;
 
     item.innerHTML = `
       <span class="timeline-time">${timeFormatted}</span>
-      <span class="timeline-desc">#${i + 1} ${stop.address}</span>
+      <span class="timeline-desc">#${num} ${stop.address}</span>
       <span class="timeline-dist">+${stop.distance_from_prev_km} km</span>
     `;
     container.appendChild(item);
@@ -482,7 +474,7 @@ function renderScheduleTimeline(bestRes) {
   endItem.innerHTML = `
     <span class="timeline-time">${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}</span>
     <span class="timeline-desc">Retorno a Base (${state.hub.name.split(",")[0]})</span>
-    <span class="timeline-dist">${bestRes.total_distance_km} km fin</span>
+    <span class="timeline-dist">${bestRes.total_distance_km} km</span>
   `;
   container.appendChild(endItem);
 }

@@ -3,23 +3,29 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cursus: Consola de Despacho y Ruteo de Flotas</title>
+  <title>CURSUS : Sistema de Despacho y Ruteo de Flotas</title>
+
+  <!-- Tipografía Inter y JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
   <!-- Leaflet 1.9.4 Local -->
   <link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css" />
 
-  <!-- Estilos de interfaz -->
+  <!-- Estilos del Sistema de Diseño Autumn-Solara -->
   <link rel="stylesheet" href="/static/css/style.css">
 
-  <!-- Chart.js 4.4.1 Local -->
+  <!-- Chart.js Local -->
   <script src="/static/vendor/chartjs/chart.umd.min.js"></script>
 </head>
 <body>
 
+  <!-- Cabecera Editorial (48px) -->
   <header class="app-header">
     <div class="brand">
-      <div class="brand-mark">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <div class="brand-mark" aria-hidden="true">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="3"></circle>
           <path d="M3 12h3m12 0h3M12 3v3m0 12v3"></path>
           <circle cx="12" cy="12" r="8"></circle>
@@ -27,49 +33,50 @@
       </div>
       <div>
         <h1 class="brand-title">CURSUS</h1>
-        <p class="brand-subtitle">Consola de Despacho y Ruteo de Flotas</p>
+        <p class="brand-subtitle">SISTEMA DE DESPACHO VRP</p>
       </div>
     </div>
 
-    <!-- Barra de estado y filtros de la cabecera -->
+    <!-- Indicadores de Estado -->
     <div class="header-center">
       <div class="header-pills">
         <div class="header-pill">
-          <span class="pill-label">Base:</span>
+          <span class="pill-label">Base</span>
           <span id="header-hub-name" class="pill-value">Monterrey Norte</span>
         </div>
         <div class="header-pill">
-          <span class="pill-label">Jornada:</span>
-          <span id="header-shift-label" class="pill-value">8.0 hrs</span>
+          <span class="pill-label">Jornada</span>
+          <span id="header-shift-label" class="pill-value font-mono">8.0 hrs</span>
         </div>
         <div class="header-pill">
-          <span class="pill-label">Órdenes:</span>
-          <span id="header-orders-count" class="pill-value">0</span>
+          <span class="pill-label">Paradas</span>
+          <span id="header-orders-count" class="pill-value font-mono">0</span>
         </div>
       </div>
     </div>
 
+    <!-- Metadatos de Plataforma -->
     <div class="header-metadata">
       <span class="meta-item">
-        <span class="meta-label">Cartografía:</span>
+        <span class="meta-label">Motor</span>
         <span class="meta-value">OpenStreetMap</span>
       </span>
-      <span class="meta-separator">|</span>
+      <span class="meta-separator">/</span>
       <span class="meta-item">
-        <span class="meta-label">Modelos:</span>
-        <span class="meta-value">GA / PSO / ACO</span>
+        <span class="meta-label">Modelos</span>
+        <span class="meta-value">GA · PSO · ACO</span>
       </span>
     </div>
   </header>
 
   <div class="layout-body">
-    <!-- Panel de Despacho Lateral -->
+    <!-- Consola de Despacho Lateral -->
     <aside class="sidebar">
       
-      <!-- Navegación de pestañas del panel lateral -->
-      <nav class="sidebar-tabs" role="tablist" aria-label="Secciones de despacho">
+      <!-- Navegación por Pestañas -->
+      <nav class="sidebar-tabs" role="tablist" aria-label="Secciones de la consola">
         <button type="button" class="tab-btn active" id="tab-btn-orders" role="tab" aria-selected="true" aria-controls="tab-content-orders">
-          Órdenes (<span id="tab-orders-badge">0</span>)
+          Órdenes (<span id="tab-orders-badge" class="font-mono">0</span>)
         </button>
         <button type="button" class="tab-btn" id="tab-btn-params" role="tab" aria-selected="false" aria-controls="tab-content-params">
           Jornada y Base
@@ -79,14 +86,14 @@
         </button>
       </nav>
 
-      <!-- Pestaña 1: Cola de Órdenes -->
+      <!-- Pestaña 1: Órdenes de Entrega -->
       <div id="tab-content-orders" class="tab-pane active" role="tabpanel" aria-labelledby="tab-btn-orders">
         
         <div class="orders-toolbar">
           <form id="form-add-order" class="address-input-group" onsubmit="event.preventDefault();">
             <label for="input-address" class="field-label">Nueva parada de entrega</label>
             <div class="input-with-button">
-              <input type="text" id="input-address" class="field-input" placeholder="Dirección en OpenStreetMap..." autocomplete="off">
+              <input type="text" id="input-address" class="field-input" placeholder="Dirección para geocodificación..." autocomplete="off">
               <button type="submit" id="btn-add-address" class="btn btn-secondary">
                 Agregar
               </button>
@@ -95,7 +102,7 @@
 
           <div class="quick-actions-bar">
             <button type="button" id="btn-sample-orders" class="btn btn-utility">
-              Cargar 10 órdenes de prueba
+              Cargar lote de prueba (10)
             </button>
             <button type="button" id="btn-clear-orders" class="btn btn-utility btn-danger-ghost">
               Limpiar
@@ -103,16 +110,16 @@
           </div>
 
           <div class="map-helper-tip">
-            Haga clic en cualquier punto del mapa para insertar una orden directamente.
+            Haga clic en cualquier punto de la red vial para registrar una parada.
           </div>
         </div>
 
         <div class="orders-scroll-container">
           <div id="order-empty-state" class="empty-state">
-            <p>Cola de despacho vacía.</p>
-            <span>Ingrese una dirección o marque coordenadas sobre el mapa.</span>
+            <p>Cola de despacho sin órdenes</p>
+            <span>Ingrese una dirección o marque coordenadas directamente sobre el mapa.</span>
           </div>
-          <ol id="order-list-items" class="order-list" aria-label="Lista de paradas"></ol>
+          <ol id="order-list-items" class="order-list" aria-label="Lista de paradas registradas"></ol>
         </div>
 
         <div class="sidebar-action-footer">
@@ -132,61 +139,61 @@
           </div>
           <div class="hub-info-rows">
             <div class="info-row">
-              <span class="info-label">Coordenadas:</span>
-              <code id="hub-coords" class="info-code">25.7250, -100.3130</code>
+              <span class="info-label">Coordenadas</span>
+              <code id="hub-coords" class="info-code font-mono">25.7250, -100.3130</code>
             </div>
             <div class="info-row">
-              <span class="info-label">Referencia:</span>
+              <span class="info-label">Referencia</span>
               <span id="hub-name" class="info-text">Área Metropolitana Norte</span>
             </div>
           </div>
           <p class="field-hint">
-            Arrastre el pin rojo en el mapa para ubicar la base de salida y retorno de la flota.
+            Arrastre el marcador en el visor para reubicar el centro de salida y retorno de la flota.
           </p>
         </div>
 
         <div class="param-card">
           <div class="card-header">
-            <h3 class="card-title">Restricciones de Jornada Laboral</h3>
+            <h3 class="card-title">Restricciones de Turno</h3>
           </div>
           <div class="field-stack">
             <div class="form-row">
-              <label for="input-shift-hours" class="field-label">Duración máxima de turno (horas)</label>
-              <input type="number" id="input-shift-hours" class="field-input" value="8" min="1" max="16" step="0.5">
+              <label for="input-shift-hours" class="field-label">Límite de jornada laboral (horas)</label>
+              <input type="number" id="input-shift-hours" class="field-input font-mono" value="8" min="1" max="16" step="0.5">
             </div>
             <div class="form-row">
               <label for="input-service-time" class="field-label">Tiempo de atención por paquete (minutos)</label>
-              <input type="number" id="input-service-time" class="field-input" value="12" min="1" max="60" step="1">
+              <input type="number" id="input-service-time" class="field-input font-mono" value="12" min="1" max="60" step="1">
             </div>
             <div class="form-row">
               <label for="input-buffer-time" class="field-label">Margen de seguridad para retorno (minutos)</label>
-              <input type="number" id="input-buffer-time" class="field-input" value="15" min="0" max="60" step="5">
+              <input type="number" id="input-buffer-time" class="field-input font-mono" value="15" min="0" max="60" step="5">
             </div>
           </div>
           <p class="field-hint">
-            El motor asegurará que el tiempo de traslado más el tiempo de atención y el retorno al Hub no exceda la jornada.
+            El evaluador matemático asegura que el tiempo total de traslado, entrega y retorno no exceda la jornada.
           </p>
         </div>
 
       </div>
 
-      <!-- Pestaña 3: Resultados y Comparativa -->
+      <!-- Pestaña 3: Métricas y Benchmarking -->
       <div id="tab-content-results" class="tab-pane" role="tabpanel" aria-labelledby="tab-btn-results">
         
         <div id="results-empty-notice" class="empty-state">
-          <p>No se han ejecutado simulaciones.</p>
-          <span>Cargue órdenes y ejecute el optimizador para visualizar las métricas comparativas.</span>
+          <p>Sin simulaciones activas</p>
+          <span>Ejecute el motor de optimización para evaluar la convergencia y comparativa entre GA, PSO y ACO.</span>
         </div>
 
         <div id="results-content" style="display: none;">
           <div class="benchmark-summary-bar">
             <div class="summary-stat">
-              <span class="stat-label">Algoritmo con menor distancia:</span>
-              <strong id="stat-best-distance" class="stat-value text-accent">--</strong>
+              <span class="stat-label">Ruta con menor coste</span>
+              <strong id="stat-best-distance" class="stat-value text-accent font-mono">--</strong>
             </div>
             <div class="summary-stat">
-              <span class="stat-label">Tasa de cumplimiento de turno:</span>
-              <strong id="stat-fulfillment" class="stat-value">--</strong>
+              <span class="stat-label">Cumplimiento de turno</span>
+              <strong id="stat-fulfillment" class="stat-value font-mono">--</strong>
             </div>
           </div>
 
@@ -198,7 +205,7 @@
 
           <div class="chart-box">
             <div class="chart-header">
-              <span class="chart-title">Convergencia de Coste por Iteración</span>
+              <span class="chart-title">Convergencia de Función Objetivo</span>
             </div>
             <div class="chart-canvas-wrapper">
               <canvas id="chart-convergence" role="img" aria-label="Curvas de convergencia"></canvas>
@@ -206,8 +213,8 @@
           </div>
 
           <div class="schedule-section">
-            <h4 class="schedule-heading">Itinerario de Paradas (Mejor Algoritmo)</h4>
-            <div id="schedule-timeline" class="timeline-container"></div>
+            <h4 class="schedule-heading">Itinerario Secuencial de Despacho</h4>
+            <div id="schedule-timeline" class="timeline-container font-mono"></div>
           </div>
         </div>
 
@@ -217,10 +224,10 @@
 
     <!-- Visor Cartográfico Principal -->
     <main class="map-viewport">
-      <div id="map" role="region" aria-label="Mapa interactivo de despacho"></div>
+      <div id="map" role="region" aria-label="Mapa interactivo de despacho y rutas"></div>
 
-      <!-- Panel flotante de capas de rutas -->
-      <div class="map-floating-overlay" role="toolbar" aria-label="Capas de algoritmos">
+      <!-- Superposición Flotante de Rutas -->
+      <div class="map-floating-overlay" role="toolbar" aria-label="Control de capas de algoritmos">
         <div class="overlay-header">
           <span class="overlay-title">Rutas de Entrega</span>
         </div>
@@ -229,28 +236,28 @@
             <input type="checkbox" id="toggle-ga" checked>
             <span class="route-color-pill ga-color" aria-hidden="true"></span>
             <span class="route-name">Genético (GA)</span>
-            <span id="pill-km-ga" class="route-km-pill">-- km</span>
+            <span id="pill-km-ga" class="route-km-pill font-mono">-- km</span>
           </label>
           <label class="route-toggle">
             <input type="checkbox" id="toggle-pso" checked>
             <span class="route-color-pill pso-color" aria-hidden="true"></span>
             <span class="route-name">Enjambre (PSO)</span>
-            <span id="pill-km-pso" class="route-km-pill">-- km</span>
+            <span id="pill-km-pso" class="route-km-pill font-mono">-- km</span>
           </label>
           <label class="route-toggle">
             <input type="checkbox" id="toggle-aco" checked>
             <span class="route-color-pill aco-color" aria-hidden="true"></span>
             <span class="route-name">Hormigas (ACO)</span>
-            <span id="pill-km-aco" class="route-km-pill">-- km</span>
+            <span id="pill-km-aco" class="route-km-pill font-mono">-- km</span>
           </label>
         </div>
       </div>
 
-      <!-- Barra flotante inferior de estado del despacho -->
+      <!-- Muelle Inferior de Estado en Mapa -->
       <div id="map-status-dock" class="map-status-dock">
         <span id="dock-status-message">Modo de edición activo. Agregue órdenes o ejecute el optimizador.</span>
-        <button type="button" id="btn-dock-view-metrics" class="btn btn-utility" style="display: none;">
-          Ver reporte comparativo
+        <button type="button" id="btn-dock-view-metrics" class="btn btn-utility font-mono" style="display: none;">
+          Ver reporte
         </button>
       </div>
     </main>

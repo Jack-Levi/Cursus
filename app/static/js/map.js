@@ -5,37 +5,44 @@ let routeLayerGA;
 let routeLayerPSO;
 let routeLayerACO;
 
-// Marcador SVG para el Centro de Distribución
+// Marcador SVG para el Centro de Distribución (Rubí Técnico #FB7185)
 const hubSvgIcon = L.divIcon({
   className: "leaflet-hub-marker",
   html: `
-    <svg width="30" height="36" viewBox="0 0 30 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M15 0C6.71573 0 0 6.71573 0 15C0 24 15 36 15 36C15 36 30 24 30 15C30 6.71573 23.2843 0 15 0Z" fill="#dc2626"/>
-      <path d="M15 2C7.8203 2 2 7.8203 2 15C2 22.5 13.5 32.8 15 34.2C16.5 32.8 28 22.5 28 15C28 7.8203 22.1797 2 15 2Z" fill="#ef4444"/>
-      <rect x="9" y="9" width="12" height="11" rx="1" fill="#ffffff"/>
-      <rect x="11" y="14" width="3" height="6" fill="#dc2626"/>
-      <rect x="16" y="14" width="3" height="6" fill="#dc2626"/>
+    <svg width="32" height="38" viewBox="0 0 32 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <filter id="hub-shadow" x="0" y="0" width="32" height="38" filterUnits="userSpaceOnUse">
+        <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000000" flood-opacity="0.6"/>
+      </filter>
+      <g filter="url(#hub-shadow)">
+        <path d="M16 2C8.82 2 3 7.82 3 15C3 23.5 16 34 16 34C16 34 29 23.5 29 15C29 7.82 23.18 2 16 2Z" fill="#121316" stroke="#FB7185" stroke-width="2"/>
+        <circle cx="16" cy="14" r="5" fill="#FB7185"/>
+      </g>
     </svg>
   `,
-  iconSize: [30, 36],
-  iconAnchor: [15, 36],
-  popupAnchor: [0, -34]
+  iconSize: [32, 38],
+  iconAnchor: [16, 34],
+  popupAnchor: [0, -32]
 });
 
-// Marcador SVG numerado para órdenes de entrega
+// Marcador SVG numerado para órdenes (Obsidiana con borde blanco y tipografía monoespaciada)
 function createOrderSvgIcon(index) {
+  const label = index < 10 ? `0${index}` : `${index}`;
   return L.divIcon({
     className: "leaflet-order-marker",
     html: `
-      <svg width="24" height="30" viewBox="0 0 24 30" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 0C5.37258 0 0 5.37258 0 12C0 19.5 12 30 12 30C12 30 24 19.5 24 12C24 5.37258 18.6274 0 12 0Z" fill="#1d4ed8"/>
-        <circle cx="12" cy="11" r="9" fill="#2563eb"/>
-        <text x="12" y="14" fill="#ffffff" font-size="10" font-weight="700" text-anchor="middle" font-family="-apple-system, sans-serif">${index}</text>
+      <svg width="26" height="32" viewBox="0 0 26 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <filter id="pin-shadow-${index}" x="0" y="0" width="26" height="32" filterUnits="userSpaceOnUse">
+          <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000000" flood-opacity="0.5"/>
+        </filter>
+        <g filter="url(#pin-shadow-${index})">
+          <path d="M13 1C6.92 1 2 5.92 2 12C2 19 13 29 13 29C13 29 24 19 24 12C24 5.92 19.08 1 13 1Z" fill="#16171B" stroke="#FFFFFF" stroke-width="1.5"/>
+          <text x="13" y="15" fill="#FFFFFF" font-size="9" font-weight="700" text-anchor="middle" font-family="'JetBrains Mono', monospace">${label}</text>
+        </g>
       </svg>
     `,
-    iconSize: [24, 30],
-    iconAnchor: [12, 30],
-    popupAnchor: [0, -28]
+    iconSize: [26, 32],
+    iconAnchor: [13, 29],
+    popupAnchor: [0, -26]
   });
 }
 
@@ -61,7 +68,7 @@ function initMap(initialLat, initialLon) {
     draggable: true
   }).addTo(map);
 
-  hubMarker.bindPopup("<strong>Centro de Distribución</strong><br>Arrastre el marcador para reubicar la base.");
+  hubMarker.bindPopup("<strong>Centro de Distribución (Hub)</strong><br>Arrastre para reubicar la base de despacho.");
 
   hubMarker.on("dragend", function (e) {
     const pos = e.target.getLatLng();
@@ -72,7 +79,6 @@ function initMap(initialLat, initialLon) {
     window.onMapClicked(e.latlng.lat, e.latlng.lng);
   });
 
-  // Forzar redimensionamiento inicial para garantizar renderizado inmediato del lienzo
   setTimeout(() => {
     map.invalidateSize();
   }, 150);
@@ -84,7 +90,7 @@ function renderOrdersOnMap(orders) {
     const marker = L.marker([order.lat, order.lon], {
       icon: createOrderSvgIcon(idx + 1)
     });
-    marker.bindPopup(`<strong>Orden ${idx + 1}</strong><br>${order.address || "Coordenada registrada"}<br>Tiempo de atención: ${order.service_time_min} min`);
+    marker.bindPopup(`<strong>Parada ${idx + 1}</strong><br>${order.address || "Coordenada registrada"}<br><span class="font-mono">Atención: ${order.service_time_min} min</span>`);
     ordersLayer.addLayer(marker);
   });
 
@@ -94,14 +100,14 @@ function renderOrdersOnMap(orders) {
   }
 }
 
-function drawRoute(layer, coordinates, color, weight = 3.5, dashArray = null) {
+function drawRoute(layer, coordinates, color, weight = 3.2, dashArray = null) {
   layer.clearLayers();
   if (!coordinates || coordinates.length < 2) return;
 
   const polyline = L.polyline(coordinates, {
     color: color,
     weight: weight,
-    opacity: 0.9,
+    opacity: 0.95,
     dashArray: dashArray,
     smoothFactor: 1.0
   });
