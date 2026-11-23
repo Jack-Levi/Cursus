@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cursus | Optimización y Simulación de Despacho Logístico</title>
+
+  <!-- Leaflet 1.9.4 (CDN cdnjs) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" integrity="sha512-Zcn6HvY/ngauWP2zSTZ9cq5buhovs944j4d99gN7Wz5E43h7z/a9yS8L5j6mC5y5P3Yv5f9g==" crossorigin="" />
+
+  <!-- Estilos del proyecto con filtro cálido OSM -->
+  <link rel="stylesheet" href="/static/css/style.css">
+
+  <!-- Chart.js para curvas de convergencia -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <!-- Barra de Encabezado -->
+  <header>
+    <div class="brand">
+      <h1>CURSUS</h1>
+      <span class="tag">PIA Logística & IA</span>
+    </div>
+    <div class="header-status">
+      <span>Motor: <strong>FastAPI + Overpass (OSM)</strong></span>
+      <span>Algoritmos: <strong>GA vs PSO vs ACO</strong></span>
+    </div>
+  </header>
+
+  <div class="layout-container">
+    <!-- Panel de Control y Parámetros -->
+    <aside class="sidebar">
+      
+      <!-- Sección Hub -->
+      <div class="section">
+        <div class="section-title">
+          <span>Centro de Distribución (Hub)</span>
+          <span style="font-size: 0.72rem; color: #ef4444; font-weight: normal;">● Origen y Retorno</span>
+        </div>
+        <div style="font-size: 0.82rem; color: #cbd5e1; margin-bottom: 0.4rem;">
+          Ubicación: <strong id="hub-location-label">25.7250, -100.3130</strong>
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-muted);">
+          ℹ️ Arrastra el marcador rojo en el mapa para mover el Hub a cualquier zona.
+        </div>
+      </div>
+
+      <!-- Sección Parámetros de Jornada Laboral -->
+      <div class="section">
+        <div class="section-title">Restricción de Jornada Laboral</div>
+        <div class="form-row">
+          <div class="form-group" style="flex: 1;">
+            <label for="input-shift-hours">Jornada (Horas):</label>
+            <input type="number" id="input-shift-hours" value="8" min="1" max="16" step="0.5">
+          </div>
+          <div class="form-group" style="flex: 1;">
+            <label for="input-service-time">Entrega (Minutos):</label>
+            <input type="number" id="input-service-time" value="12" min="1" max="60" step="1">
+          </div>
+        </div>
+      </div>
+
+      <!-- Sección Recepción de Órdenes -->
+      <div class="section" style="flex: 1; display: flex; flex-direction: column;">
+        <div class="section-title">
+          <span>Recepción de Órdenes</span>
+          <span id="order-count-badge" class="tag" style="background:#0284c7; color:#fff;">0 órdenes</span>
+        </div>
+
+        <div class="form-group">
+          <label for="input-address">Dirección de entrega (OSM / Nominatim):</label>
+          <div class="form-row">
+            <input type="text" id="input-address" placeholder="Ej. Av. Universidad, San Nicolás">
+            <button class="btn btn-primary" id="btn-add-address" style="white-space: nowrap;">Agregar</button>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 0.4rem; margin-bottom: 0.75rem;">
+          <button class="btn btn-secondary" id="btn-sample-orders" style="flex: 2; font-size: 0.78rem;">
+            🎲 Cargar Órdenes de Muestra
+          </button>
+          <button class="btn btn-secondary" id="btn-clear-orders" style="flex: 1; font-size: 0.78rem;">
+            Limpiar
+          </button>
+        </div>
+
+        <div style="font-size: 0.72rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+          💡 También puedes hacer <strong>clic directo sobre el mapa</strong> para colocar órdenes.
+        </div>
+
+        <div class="order-list" id="order-list-items" style="flex: 1;">
+          <!-- Lista dinámica de órdenes -->
+        </div>
+      </div>
+
+      <!-- Botón de Simulación -->
+      <div class="section" style="border-bottom: none; background: #182234;">
+        <button class="btn btn-accent" id="btn-run-simulation">
+          🚀 Iniciar Simulación y Comparación
+        </button>
+      </div>
+
+    </aside>
+
+    <!-- Visualizador Cartográfico -->
+    <main class="map-container">
+      <div id="map"></div>
+
+      <!-- Control flotante de capas de rutas -->
+      <div class="map-floating-overlay">
+        <strong style="color: #cbd5e1; font-size: 0.75rem; text-transform: uppercase;">Capas de Rutas</strong>
+        <label class="route-toggle">
+          <input type="checkbox" id="toggle-ga" checked>
+          <span class="color-indicator" style="background: var(--accent-ga);"></span>
+          <span>Genético (GA)</span>
+        </label>
+        <label class="route-toggle">
+          <input type="checkbox" id="toggle-pso" checked>
+          <span class="color-indicator" style="background: var(--accent-pso);"></span>
+          <span>Enjambre (PSO)</span>
+        </label>
+        <label class="route-toggle">
+          <input type="checkbox" id="toggle-aco" checked>
+          <span class="color-indicator" style="background: var(--accent-aco);"></span>
+          <span>Hormigas (ACO)</span>
+        </label>
+      </div>
+
+      <!-- Panel Inferior de Resultados y Comparativa -->
+      <div class="bottom-results" id="results-panel">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem;">
+          <h3 style="font-size: 0.95rem; font-weight: 700; color: #fff;">📊 Comparativa de Algoritmos (Mismas Restricciones de Jornada)</h3>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">Red vial: Calles y avenidas de OpenStreetMap</span>
+        </div>
+
+        <div class="results-grid">
+          <div class="algo-card ga" id="card-ga"></div>
+          <div class="algo-card pso" id="card-pso"></div>
+          <div class="algo-card aco" id="card-aco"></div>
+          <div class="chart-wrapper">
+            <canvas id="chart-convergence"></canvas>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Scripts: Leaflet JS y lógica de la aplicación -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" integrity="sha512-BwHfrr4c9kmRuvxDBmgebGb8tihJYB8bp957327383182838328198==" crossorigin=""></script>
+  <script src="/static/js/map.js"></script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
