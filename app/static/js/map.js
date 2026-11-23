@@ -68,7 +68,7 @@ function initMap(initialLat, initialLon) {
     draggable: true
   }).addTo(map);
 
-  hubMarker.bindPopup("<strong>Centro de Distribución (Hub)</strong><br>Arrastre para reubicar la base de despacho.");
+  hubMarker.bindPopup("<strong>Centro de Distribución (Hub)</strong><br>Arrastre este marcador para reubicar la base de despacho en cualquier dirección.");
 
   hubMarker.on("dragend", function (e) {
     const pos = e.target.getLatLng();
@@ -128,5 +128,21 @@ function toggleRouteLayer(algoName, visible) {
     visible ? map.addLayer(routeLayerPSO) : map.removeLayer(routeLayerPSO);
   } else if (algoName === "ACO") {
     visible ? map.addLayer(routeLayerACO) : map.removeLayer(routeLayerACO);
+  }
+}
+
+function highlightHubMarker(enable = true) {
+  if (!hubMarker || !map) return;
+  const el = hubMarker.getElement();
+  if (el) {
+    if (enable) {
+      el.classList.add("pulse-highlight");
+    } else {
+      el.classList.remove("pulse-highlight");
+    }
+  }
+  if (enable) {
+    map.setView(hubMarker.getLatLng(), 14, { animate: true });
+    hubMarker.openPopup();
   }
 }

@@ -48,6 +48,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("toggle-aco").addEventListener("change", (e) => toggleRouteLayer("ACO", e.target.checked));
 
   generateSampleOrders();
+  initTutorial();
 });
 
 function setupTabs() {
@@ -477,4 +478,169 @@ function renderScheduleTimeline(bestRes) {
     <span class="timeline-dist">${bestRes.total_distance_km} km</span>
   `;
   container.appendChild(endItem);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MÓDULO TUTORIAL // Patrón Autumn-Solara
+   ═══════════════════════════════════════════════════════════════ */
+
+const TOUR_STEPS = [
+  {
+    step: 1,
+    title: "Paso 1: Centro de Distribución y Reubicación",
+    desc: "El marcador rojo con halo técnico en el mapa señala tu base de operaciones. <strong>Puedes hacer clic y arrastrar el símbolo rojo a cualquier dirección o colonia de la ciudad</strong>; al soltarlo, Cursus geocodifica automáticamente la nueva calle y reconfigura la matriz de distancias.",
+    tab: "params",
+    highlightHub: true
+  },
+  {
+    step: 2,
+    title: "Paso 2: Registro de Órdenes y Geocodificación",
+    desc: "Agrega paradas de entrega de tres formas: haciendo clic directamente sobre cualquier calle del mapa interactivo, escribiendo una dirección en la barra de búsqueda o cargando las 10 paradas de prueba predefinidas en Monterrey.",
+    tab: "orders",
+    highlightHub: false
+  },
+  {
+    step: 3,
+    title: "Paso 3: Restricciones de Jornada Laboral",
+    desc: "Establece el límite de horas de turno del repartidor (ej. 8.0 hrs), el tiempo de atención en cada domicilio (12 min) y el margen de regreso seguro a la base (15 min). Si la ruta total excede la jornada, el sistema penaliza y descarta las entregas inviables.",
+    tab: "params",
+    highlightHub: false
+  },
+  {
+    step: 4,
+    title: "Paso 4: Red Vial Real y Modelos (GA · PSO · ACO)",
+    desc: "Al presionar el botón <strong>'Optimizar Ruta y Comparar Algoritmos'</strong>, Cursus descarga la topología vial con sentidos y velocidades vía Overpass API, resolviendo caminos mínimos con Dijkstra y optimizando la secuencia mediante Algoritmos Genéticos, Enjambre y Hormigas simultáneamente.",
+    tab: "orders",
+    highlightHub: false
+  },
+  {
+    step: 5,
+    title: "Paso 5: Métricas Comparativas y Hoja de Ruta",
+    desc: "Al finalizar la optimización, la pestaña de <strong>Métricas</strong> despliega el algoritmo ganador, la curva de convergencia iterativa y el cronograma cronológico paso a paso con horario exacto de llegada a cada cliente y retorno seguro al Hub.",
+    tab: "results",
+    highlightHub: false
+  }
+];
+
+let currentTourIndex = -1; // -1: Welcome card, 0 a 4: Pasos guiados
+
+function initTutorial() {
+  const openBtn = document.getElementById("btn-open-tutorial");
+  const startBtn = document.getElementById("btn-start-tour");
+  const skipBtn = document.getElementById("btn-skip-tour");
+  const closeBtn = document.getElementById("btn-close-tour");
+  const backdropDismiss = document.getElementById("tutorial-backdrop-dismiss");
+  const prevBtn = document.getElementById("btn-tour-prev");
+  const nextBtn = document.getElementById("btn-tour-next");
+
+  if (openBtn) openBtn.addEventListener("click", () => openTutorial(true));
+  if (startBtn) startBtn.addEventListener("click", () => setTourStep(0));
+  if (skipBtn) skipBtn.addEventListener("click", closeTutorial);
+  if (closeBtn) closeBtn.addEventListener("click", closeTutorial);
+  if (backdropDismiss) backdropDismiss.addEventListener("click", closeTutorial);
+  if (prevBtn) prevBtn.addEventListener("click", prevTourStep);
+  if (nextBtn) nextBtn.addEventListener("click", nextTourStep);
+
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      const overlay = document.getElementById("tutorial-overlay");
+      if (overlay && overlay.style.display !== "none") {
+        closeTutorial();
+      }
+    }
+  });
+
+  // Apertura automática en primera visita
+  if (!localStorage.getItem("cursus_tutorial_seen")) {
+    setTimeout(() => {
+      openTutorial(false);
+    }, 400);
+  }
+}
+
+function openTutorial(forceWelcome = true) {
+  const overlay = document.getElementById("tutorial-overlay");
+  if (!overlay) return;
+  overlay.style.display = "flex";
+
+  if (forceWelcome || currentTourIndex === -1) {
+    currentTourIndex = -1;
+    document.getElementById("tutorial-card-welcome").style.display = "block";
+    document.getElementById("tutorial-card-step").style.display = "none";
+    if (typeof highlightHubMarker === "function") {
+      highlightHubMarker(false);
+    }
+  } else {
+    setTourStep(currentTourIndex);
+  }
+}
+
+function closeTutorial() {
+  const overlay = document.getElementById("tutorial-overlay");
+  if (overlay) overlay.style.display = "none";
+  localStorage.setItem("cursus_tutorial_seen", "true");
+  if (typeof highlightHubMarker === "function") {
+    highlightHubMarker(false);
+  }
+}
+
+function setTourStep(index) {
+  currentTourIndex = index;
+  document.getElementById("tutorial-card-welcome").style.display = "none";
+  document.getElementById("tutorial-card-step").style.display = "block";
+
+  const stepData = TOUR_STEPS[index];
+  document.getElementById("tut-step-badge").innerText = `PASO ${stepData.step} DE ${TOUR_STEPS.length}`;
+  document.getElementById("tut-step-title").innerText = stepData.title;
+  document.getElementById("tut-step-desc").innerHTML = stepData.desc;
+
+  if (stepData.tab) {
+    switchTab(stepData.tab);
+  }
+
+  if (typeof highlightHubMarker === "function") {
+    highlightHubMarker(stepData.highlightHub);
+  }
+
+  // Actualizar indicadores tipo cápsula
+  const indicators = document.querySelectorAll("#tut-progress-indicators .indicator-dot");
+  indicators.forEach((dot, idx) => {
+    dot.classList.toggle("active", idx === index);
+  });
+
+  // Actualizar textos de botones de navegación
+  const nextBtn = document.getElementById("btn-tour-next");
+  if (index === TOUR_STEPS.length - 1) {
+    nextBtn.innerText = "¡Finalizar y Explorar!";
+  } else {
+    nextBtn.innerText = "Siguiente →";
+  }
+
+  const prevBtn = document.getElementById("btn-tour-prev");
+  if (index === 0) {
+    prevBtn.innerText = "← Inicio";
+  } else {
+    prevBtn.innerText = "← Anterior";
+  }
+}
+
+function nextTourStep() {
+  if (currentTourIndex < TOUR_STEPS.length - 1) {
+    setTourStep(currentTourIndex + 1);
+  } else {
+    closeTutorial();
+  }
+}
+
+function prevTourStep() {
+  if (currentTourIndex > 0) {
+    setTourStep(currentTourIndex - 1);
+  } else {
+    currentTourIndex = -1;
+    document.getElementById("tutorial-card-welcome").style.display = "block";
+    document.getElementById("tutorial-card-step").style.display = "none";
+    if (typeof highlightHubMarker === "function") {
+      highlightHubMarker(false);
+    }
+  }
 }

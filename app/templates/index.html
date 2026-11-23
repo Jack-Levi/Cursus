@@ -67,6 +67,18 @@
         <span class="meta-value">GA · PSO · ACO</span>
       </span>
     </div>
+
+    <!-- Acciones de Cabecera -->
+    <div class="header-actions">
+      <button type="button" id="btn-open-tutorial" class="header-pill-tutorial font-mono">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        <span>TUTORIAL</span>
+      </button>
+    </div>
   </header>
 
   <div class="layout-body">
@@ -261,6 +273,70 @@
         </button>
       </div>
     </main>
+  </div>
+
+  <!-- Tutorial Overlay (Patrón Autumn-Solara) -->
+  <div id="tutorial-overlay" class="tutorial-backdrop" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="tut-title">
+    <div class="tutorial-backdrop-dismiss" id="tutorial-backdrop-dismiss"></div>
+
+    <!-- 1. Tarjeta de Bienvenida (Paso -1) -->
+    <div id="tutorial-card-welcome" class="tutorial-card tutorial-card-welcome">
+      <div class="tutorial-icon-badge" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polygon points="10 8 16 12 10 16 10 8"></polygon>
+        </svg>
+      </div>
+
+      <span class="tutorial-sys-label font-mono">ONBOARDING // SYS-01</span>
+      <h2 id="tut-title" class="tutorial-heading">Bienvenido a CURSUS</h2>
+      <p class="tutorial-description">
+        Plataforma técnica de optimización y ruteo de paquetería VRP (Vehicle Routing Problem). Compara Algoritmos Genéticos (GA), Enjambre de Partículas (PSO) y Colonia de Hormigas (ACO) bajo restricciones de jornada laboral sobre la red vial real de OpenStreetMap.
+      </p>
+
+      <div class="tutorial-actions-col">
+        <button type="button" id="btn-start-tour" class="pill-btn-white">
+          Iniciar Tour Guiado (5 Pasos) &rarr;
+        </button>
+        <button type="button" id="btn-skip-tour" class="tutorial-skip-btn font-mono">
+          Saltar Tutorial e Ir a la Plataforma &times;
+        </button>
+      </div>
+    </div>
+
+    <!-- 2. Tarjeta de Pasos (Pasos 0 a 4) -->
+    <div id="tutorial-card-step" class="tutorial-card tutorial-card-step" style="display: none;">
+      <div class="tutorial-step-header">
+        <span id="tut-step-badge" class="tutorial-step-pill font-mono">PASO 1 DE 5</span>
+        <button type="button" id="btn-close-tour" class="tutorial-close-btn font-mono" aria-label="Cerrar tutorial">
+          &times; Cerrar (Esc)
+        </button>
+      </div>
+
+      <h3 id="tut-step-title" class="tutorial-step-title">Paso 1: Centro de Distribución (Hub)</h3>
+      <p id="tut-step-desc" class="tutorial-step-desc">
+        El marcador rojo con halo técnico representa tu base de operaciones. Puedes hacer clic y arrastrar el símbolo rojo a cualquier dirección o colonia de la ciudad; al soltarlo, Cursus geocodifica automáticamente la nueva calle y reconfigura la matriz vial.
+      </p>
+
+      <!-- Indicadores de Progreso tipo Cápsula -->
+      <div id="tut-progress-indicators" class="tutorial-indicators">
+        <span class="indicator-dot active"></span>
+        <span class="indicator-dot"></span>
+        <span class="indicator-dot"></span>
+        <span class="indicator-dot"></span>
+        <span class="indicator-dot"></span>
+      </div>
+
+      <!-- Controles de Navegación -->
+      <div class="tutorial-nav-footer">
+        <button type="button" id="btn-tour-prev" class="btn btn-secondary font-mono">
+          &larr; Anterior
+        </button>
+        <button type="button" id="btn-tour-next" class="btn btn-primary-white font-mono">
+          Siguiente &rarr;
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- Scripts -->
