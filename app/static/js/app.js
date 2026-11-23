@@ -2,10 +2,14 @@ const state = {
   hub: { name: "Centro de Distribución Cursus Norte", lat: 25.7250, lon: -100.3130 },
   orders: [],
   shift: { max_hours: 8.0, service_time_per_order_min: 12.0, buffer_time_min: 15.0 },
+  results: null,
   convergenceChart: null
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
+  // Inicialización de pestañas del panel lateral
+  setupTabs();
+
   try {
     const res = await fetch("/api/config");
     if (res.ok) {
@@ -17,12 +21,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     console.warn("Error cargando configuración remota. Utilizando valores locales.", e);
   }
 
-  document.getElementById("hub-coords").innerText = `${state.hub.lat.toFixed(4)}, ${state.hub.lon.toFixed(4)}`;
-  document.getElementById("hub-name").innerText = state.hub.name;
+  updateHeaderAndHubUI();
 
+  // Inicializar mapa de Leaflet
   initMap(state.hub.lat, state.hub.lon);
 
-  // Formularios y botones
+  // Vincular eventos de formularios
   document.getElementById("btn-add-address").addEventListener("click", handleAddAddress);
   document.getElementById("input-address").addEventListener("keypress", (e) => {
     if (e.key === "Enter") handleAddAddress();
@@ -30,38 +34,82 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("btn-sample-orders").addEventListener("click", generateSampleOrders);
   document.getElementById("btn-clear-orders").addEventListener("click", clearAllOrders);
   document.getElementById("btn-run-simulation").addEventListener("click", runSimulation);
-  document.getElementById("btn-close-results").addEventListener("click", () => {
-    document.getElementById("results-panel").classList.remove("active");
+  document.getElementById("btn-dock-view-metrics").addEventListener("click", () => switchTab("results"));
+
+  // Eventos de cambios en parámetros
+  document.getElementById("input-shift-hours").addEventListener("change", (e) => {
+    state.shift.max_hours = parseFloat(e.target.value) || 8.0;
+    updateHeaderAndHubUI();
+  });
+  document.getElementById("input-service-time").addEventListener("change", (e) => {
+    state.shift.service_time_per_order_min = parseFloat(e.target.value) || 12.0;
+  });
+  document.getElementById("input-buffer-time").addEventListener("change", (e) => {
+    state.shift.buffer_time_min = parseFloat(e.target.value) || 15.0;
   });
 
-  // Capas
+  // Toggles de rutas
   document.getElementById("toggle-ga").addEventListener("change", (e) => toggleRouteLayer("GA", e.target.checked));
   document.getElementById("toggle-pso").addEventListener("change", (e) => toggleRouteLayer("PSO", e.target.checked));
   document.getElementById("toggle-aco").addEventListener("change", (e) => toggleRouteLayer("ACO", e.target.checked));
 
+  // Cargar órdenes iniciales
   generateSampleOrders();
 });
+
+function setupTabs() {
+  const tabs = [
+    { btn: "tab-btn-orders", pane: "tab-content-orders", name: "orders" },
+    { btn: "tab-btn-params", pane: "tab-content-params", name: "params" },
+    { btn: "tab-btn-results", pane: "tab-content-results", name: "results" }
+  ];
+
+  tabs.forEach(t => {
+    document.getElementById(t.btn).addEventListener("click", () => switchTab(t.name));
+  });
+}
+
+function switchTab(tabName) {
+  const tabs = [
+    { btn: "tab-btn-orders", pane: "tab-content-orders", name: "orders" },
+    { btn: "tab-btn-params", pane: "tab-content-params", name: "params" },
+    { btn: "tab-btn-results", pane: "tab-content-results", name: "results" }
+  ];
+
+  tabs.forEach(t => {
+    const isTarget = t.name === tabName;
+    document.getElementById(t.btn).classList.toggle("active", isTarget);
+    document.getElementById(t.btn).setAttribute("aria-selected", isTarget ? "true" : "false");
+    document.getElementById(t.pane).classList.toggle("active", isTarget);
+  });
+}
+
+function updateHeaderAndHubUI() {
+  document.getElementById("hub-coords").innerText = `${state.hub.lat.toFixed(4)}, ${state.hub.lon.toFixed(4)}`;
+  document.getElementById("hub-name").innerText = state.hub.name;
+  document.getElementById("header-hub-name").innerText = state.hub.name.split(",")[0];
+  document.getElementById("header-shift-label").innerText = `${state.shift.max_hours.toFixed(1)} hrs`;
+}
 
 window.onHubMoved = async (lat, lon) => {
   state.hub.lat = lat;
   state.hub.lon = lon;
-  document.getElementById("hub-coords").innerText = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
 
   try {
     const res = await fetch(`/api/reverse-geocode?lat=${lat}&lon=${lon}`);
     if (res.ok) {
       const data = await res.json();
       state.hub.name = data.display_name;
-      document.getElementById("hub-name").innerText = data.display_name;
     }
   } catch (e) {
     state.hub.name = `Base (${lat.toFixed(4)}, ${lon.toFixed(4)})`;
-    document.getElementById("hub-name").innerText = state.hub.name;
   }
+
+  updateHeaderAndHubUI();
 };
 
 window.onMapClicked = async (lat, lon) => {
-  let display = `Punto (${lat.toFixed(4)}, ${lon.toFixed(4)})`;
+  let display = `Parada (${lat.toFixed(4)}, ${lon.toFixed(4)})`;
   try {
     const res = await fetch(`/api/reverse-geocode?lat=${lat}&lon=${lon}`);
     if (res.ok) {
@@ -84,7 +132,7 @@ async function handleAddAddress() {
 
   const btn = document.getElementById("btn-add-address");
   const originalText = btn.innerText;
-  btn.innerText = "Consultando...";
+  btn.innerText = "Buscando...";
   btn.disabled = true;
 
   try {
@@ -116,7 +164,7 @@ function addOrder(lat, lon, address = "") {
     id: `ORD-${state.orders.length + 1}`,
     lat: lat,
     lon: lon,
-    address: address || `Orden ${state.orders.length + 1}`,
+    address: address || `Parada ${state.orders.length + 1}`,
     service_time_min: serviceTime
   };
   state.orders.push(newOrder);
@@ -131,9 +179,18 @@ function removeOrder(index) {
 
 function clearAllOrders() {
   state.orders = [];
+  state.results = null;
   clearRoutes();
   updateOrdersUI();
-  document.getElementById("results-panel").classList.remove("active");
+
+  document.getElementById("results-empty-notice").style.display = "flex";
+  document.getElementById("results-content").style.display = "none";
+  document.getElementById("btn-dock-view-metrics").style.display = "none";
+  document.getElementById("dock-status-message").innerText = "Cola vacía. Ingrese órdenes para optimizar.";
+
+  document.getElementById("pill-km-ga").innerText = "-- km";
+  document.getElementById("pill-km-pso").innerText = "-- km";
+  document.getElementById("pill-km-aco").innerText = "-- km";
 }
 
 function generateSampleOrders() {
@@ -153,7 +210,7 @@ function generateSampleOrders() {
       id: `ORD-${i}`,
       lat: lat,
       lon: lon,
-      address: `Destino ${i}`,
+      address: `Parada ${i}: Sector ${String.fromCharCode(64 + i)}`,
       service_time_min: serviceTime
     });
   }
@@ -166,11 +223,13 @@ function updateOrdersUI() {
 
   const container = document.getElementById("order-list-items");
   const emptyState = document.getElementById("order-empty-state");
-  const badge = document.getElementById("order-count-badge");
+  const countBadge = document.getElementById("tab-orders-badge");
+  const headerCount = document.getElementById("header-orders-count");
   const runBtn = document.getElementById("btn-run-simulation");
 
   container.innerHTML = "";
-  badge.innerText = `${state.orders.length} órdenes`;
+  countBadge.innerText = state.orders.length;
+  headerCount.innerText = state.orders.length;
 
   if (state.orders.length === 0) {
     emptyState.style.display = "flex";
@@ -183,14 +242,14 @@ function updateOrdersUI() {
 
   state.orders.forEach((o, idx) => {
     const li = document.createElement("li");
-    li.className = "order-row";
+    li.className = "order-card-row";
     li.innerHTML = `
-      <span class="order-row-index">${idx + 1}</span>
-      <span class="order-row-address" title="${o.address}">${o.address}</span>
-      <div class="order-row-meta">
-        <span class="order-time-tag">${o.service_time_min}m</span>
-        <button type="button" class="order-remove-btn" onclick="removeOrder(${idx})" aria-label="Eliminar orden ${idx + 1}">&times;</button>
+      <div class="order-badge-num">${idx + 1}</div>
+      <div class="order-main-info">
+        <div class="order-address-text" title="${o.address}">${o.address}</div>
+        <div class="order-meta-text">${o.lat.toFixed(4)}, ${o.lon.toFixed(4)} · ${o.service_time_min}m de entrega</div>
       </div>
+      <button type="button" class="order-delete-btn" onclick="removeOrder(${idx})" aria-label="Eliminar orden ${idx + 1}">&times;</button>
     `;
     container.appendChild(li);
   });
@@ -201,11 +260,15 @@ async function runSimulation() {
 
   const btn = document.getElementById("btn-run-simulation");
   const originalText = btn.innerText;
-  btn.innerText = "Consultando red vial y ejecutando optimización...";
+  btn.innerText = "Descargando red vial y optimizando...";
   btn.disabled = true;
+
+  const statusDock = document.getElementById("dock-status-message");
+  statusDock.innerText = "Ejecutando GA, PSO y ACO con restricciones de jornada...";
 
   const shiftHours = parseFloat(document.getElementById("input-shift-hours").value) || 8.0;
   const serviceTime = parseFloat(document.getElementById("input-service-time").value) || 12.0;
+  const bufferTime = parseFloat(document.getElementById("input-buffer-time").value) || 15.0;
 
   state.orders.forEach(o => o.service_time_min = serviceTime);
 
@@ -215,7 +278,7 @@ async function runSimulation() {
     shift: {
       max_hours: shiftHours,
       service_time_per_order_min: serviceTime,
-      buffer_time_min: 15.0
+      buffer_time_min: bufferTime
     }
   };
 
@@ -233,6 +296,7 @@ async function runSimulation() {
     }
 
     const data = await res.json();
+    state.results = data;
     renderSimulationResults(data);
   } catch (e) {
     alert("Fallo de comunicación con el motor de optimización.");
@@ -243,49 +307,70 @@ async function runSimulation() {
 }
 
 function renderSimulationResults(data) {
-  const panel = document.getElementById("results-panel");
-  panel.classList.add("active");
-
   const results = data.results;
 
-  renderAlgoCard("card-ga", results.GA, data.best_algorithm_by_distance === "GA");
-  renderAlgoCard("card-pso", results.PSO, data.best_algorithm_by_distance === "PSO");
-  renderAlgoCard("card-aco", results.ACO, data.best_algorithm_by_distance === "ACO");
+  document.getElementById("results-empty-notice").style.display = "none";
+  document.getElementById("results-content").style.display = "block";
+  document.getElementById("btn-dock-view-metrics").style.display = "inline-flex";
 
+  // Actualizar resumen superior de métricas
+  const bestAlgo = data.best_algorithm_by_distance;
+  const bestRes = results[bestAlgo];
+  document.getElementById("stat-best-distance").innerText = `${bestAlgo} (${bestRes.total_distance_km} km)`;
+  document.getElementById("stat-fulfillment").innerText = `${bestRes.orders_delivered} de ${bestRes.orders_delivered + bestRes.orders_dropped} órdenes`;
+
+  document.getElementById("dock-status-message").innerText = `Optimización completada. Mejor ruta: ${bestAlgo} con ${bestRes.total_distance_km} km (${bestRes.total_time_hours} hrs)`;
+
+  // Tarjetas verticales de cada algoritmo
+  renderSideMetricCard("side-card-ga", results.GA, bestAlgo === "GA");
+  renderSideMetricCard("side-card-pso", results.PSO, bestAlgo === "PSO");
+  renderSideMetricCard("side-card-aco", results.ACO, bestAlgo === "ACO");
+
+  // Etiquetas de km en el overlay del mapa
+  document.getElementById("pill-km-ga").innerText = `${results.GA.total_distance_km} km`;
+  document.getElementById("pill-km-pso").innerText = `${results.PSO.total_distance_km} km`;
+  document.getElementById("pill-km-aco").innerText = `${results.ACO.total_distance_km} km`;
+
+  // Trazar rutas
   clearRoutes();
   drawRoute(routeLayerGA, results.GA.route_polyline, "#0284c7", 3.5);
   drawRoute(routeLayerPSO, results.PSO.route_polyline, "#059669", 3.5, "6, 6");
   drawRoute(routeLayerACO, results.ACO.route_polyline, "#d97706", 3.5, "2, 6");
 
+  // Curva de convergencia
   renderConvergenceChart(results);
+
+  // Itinerario de paradas
+  renderScheduleTimeline(bestRes);
+
+  // Cambiar a la pestaña de métricas para mostrar el reporte
+  switchTab("results");
 }
 
-function renderAlgoCard(containerId, res, isOptimal) {
+function renderSideMetricCard(containerId, res, isOptimal) {
   const container = document.getElementById(containerId);
   container.innerHTML = `
-    <div class="card-title-row">
-      <span class="card-title">${res.name}</span>
-      ${isOptimal ? '<span class="badge-optimal">Menor Distancia</span>' : ''}
+    <div class="card-top">
+      <span class="card-algo-name">${res.name}</span>
+      ${isOptimal ? '<span class="badge-winner">Menor Distancia</span>' : ''}
     </div>
-    <div class="metric-line">
-      <span>Órdenes completadas:</span>
-      <span class="metric-data">${res.orders_delivered} de ${res.orders_delivered + res.orders_dropped}</span>
-    </div>
-    <div class="metric-line">
-      <span>Distancia de ruta:</span>
-      <span class="metric-data">${res.total_distance_km} km</span>
-    </div>
-    <div class="metric-line">
-      <span>Duración estimada:</span>
-      <span class="metric-data">${res.total_time_hours} hrs</span>
-    </div>
-    <div class="metric-line">
-      <span>Manejo / Atención:</span>
-      <span class="metric-data">${res.driving_time_hours}h / ${res.service_time_hours}h</span>
-    </div>
-    <div class="metric-line">
-      <span>Tiempo de cómputo:</span>
-      <span class="metric-data">${res.execution_time_sec} s</span>
+    <div class="metric-grid-2x2">
+      <div class="m-item">
+        <span class="m-label">Distancia:</span>
+        <span class="m-data">${res.total_distance_km} km</span>
+      </div>
+      <div class="m-item">
+        <span class="m-label">Tiempo Total:</span>
+        <span class="m-data">${res.total_time_hours} hrs</span>
+      </div>
+      <div class="m-item">
+        <span class="m-label">Completadas:</span>
+        <span class="m-data">${res.orders_delivered} / ${res.orders_delivered + res.orders_dropped}</span>
+      </div>
+      <div class="m-item">
+        <span class="m-label">Cómputo:</span>
+        <span class="m-data">${res.execution_time_sec} s</span>
+      </div>
     </div>
   `;
 }
@@ -314,7 +399,7 @@ function renderConvergenceChart(results) {
           data: gaData,
           borderColor: "#0284c7",
           backgroundColor: "transparent",
-          borderWidth: 2,
+          borderWidth: 1.8,
           pointRadius: 0
         },
         {
@@ -322,7 +407,7 @@ function renderConvergenceChart(results) {
           data: psoData,
           borderColor: "#059669",
           backgroundColor: "transparent",
-          borderWidth: 2,
+          borderWidth: 1.8,
           pointRadius: 0
         },
         {
@@ -330,7 +415,7 @@ function renderConvergenceChart(results) {
           data: acoData,
           borderColor: "#d97706",
           backgroundColor: "transparent",
-          borderWidth: 2,
+          borderWidth: 1.8,
           pointRadius: 0
         }
       ]
@@ -342,27 +427,62 @@ function renderConvergenceChart(results) {
       plugins: {
         legend: {
           position: "top",
-          labels: { color: "#cbd5e1", font: { size: 10 } }
-        },
-        title: {
-          display: true,
-          text: "Convergencia de Función Objetivo (Distancia y Penalización)",
-          color: "#9ca3af",
-          font: { size: 11, weight: "bold" }
+          labels: { color: "#cbd5e1", font: { size: 9 }, boxWidth: 12 }
         }
       },
       scales: {
         x: {
-          title: { display: true, text: "Iteración", color: "#64748b", font: { size: 9 } },
-          ticks: { color: "#64748b" },
-          grid: { color: "#252f44" }
+          title: { display: false },
+          ticks: { color: "#64748b", font: { size: 8 } },
+          grid: { color: "#243048" }
         },
         y: {
-          title: { display: true, text: "Valor de Coste", color: "#64748b", font: { size: 9 } },
-          ticks: { color: "#64748b" },
-          grid: { color: "#252f44" }
+          title: { display: false },
+          ticks: { color: "#64748b", font: { size: 8 } },
+          grid: { color: "#243048" }
         }
       }
     }
   });
+}
+
+function renderScheduleTimeline(bestRes) {
+  const container = document.getElementById("schedule-timeline");
+  container.innerHTML = "";
+
+  const startItem = document.createElement("div");
+  startItem.className = "timeline-item";
+  startItem.innerHTML = `
+    <span class="timeline-time">00:00</span>
+    <span class="timeline-desc">Salida de Base (${state.hub.name.split(",")[0]})</span>
+    <span class="timeline-dist">0.0 km</span>
+  `;
+  container.appendChild(startItem);
+
+  bestRes.stops.forEach((stop, i) => {
+    const item = document.createElement("div");
+    item.className = "timeline-item";
+    const hours = Math.floor(stop.arrival_time_min / 60);
+    const mins = Math.floor(stop.arrival_time_min % 60);
+    const timeFormatted = `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+
+    item.innerHTML = `
+      <span class="timeline-time">${timeFormatted}</span>
+      <span class="timeline-desc">#${i + 1} ${stop.address}</span>
+      <span class="timeline-dist">+${stop.distance_from_prev_km} km</span>
+    `;
+    container.appendChild(item);
+  });
+
+  const endItem = document.createElement("div");
+  endItem.className = "timeline-item";
+  const totalMin = bestRes.total_time_hours * 60;
+  const endH = Math.floor(totalMin / 60);
+  const endM = Math.floor(totalMin % 60);
+  endItem.innerHTML = `
+    <span class="timeline-time">${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}</span>
+    <span class="timeline-desc">Retorno a Base (${state.hub.name.split(",")[0]})</span>
+    <span class="timeline-dist">${bestRes.total_distance_km} km fin</span>
+  `;
+  container.appendChild(endItem);
 }

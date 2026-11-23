@@ -71,6 +71,11 @@ function initMap(initialLat, initialLon) {
   map.on("click", function (e) {
     window.onMapClicked(e.latlng.lat, e.latlng.lng);
   });
+
+  // Forzar redimensionamiento inicial para garantizar renderizado inmediato del lienzo
+  setTimeout(() => {
+    map.invalidateSize();
+  }, 150);
 }
 
 function renderOrdersOnMap(orders) {

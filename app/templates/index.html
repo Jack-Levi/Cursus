@@ -3,16 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cursus: Simulador de Optimización Logística</title>
+  <title>Cursus: Consola de Despacho y Ruteo de Flotas</title>
 
-  <!-- Leaflet 1.9.4 -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" integrity="sha512-Zcn6HvY/ngauWP2zSTZ9cq5buhovs944j4d99gN7Wz5E43h7z/a9yS8L5j6mC5y5P3Yv5f9g==" crossorigin="" />
+  <!-- Leaflet 1.9.4 Local -->
+  <link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css" />
 
   <!-- Estilos de interfaz -->
   <link rel="stylesheet" href="/static/css/style.css">
 
-  <!-- Chart.js para convergencia -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <!-- Chart.js 4.4.1 Local -->
+  <script src="/static/vendor/chartjs/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -27,162 +27,237 @@
       </div>
       <div>
         <h1 class="brand-title">CURSUS</h1>
-        <p class="brand-subtitle">Simulador de Despacho y Ruteo de Vehículos</p>
+        <p class="brand-subtitle">Consola de Despacho y Ruteo de Flotas</p>
       </div>
     </div>
+
+    <!-- Barra de estado y filtros de la cabecera -->
+    <div class="header-center">
+      <div class="header-pills">
+        <div class="header-pill">
+          <span class="pill-label">Base:</span>
+          <span id="header-hub-name" class="pill-value">Monterrey Norte</span>
+        </div>
+        <div class="header-pill">
+          <span class="pill-label">Jornada:</span>
+          <span id="header-shift-label" class="pill-value">8.0 hrs</span>
+        </div>
+        <div class="header-pill">
+          <span class="pill-label">Órdenes:</span>
+          <span id="header-orders-count" class="pill-value">0</span>
+        </div>
+      </div>
+    </div>
+
     <div class="header-metadata">
       <span class="meta-item">
-        <span class="meta-label">Motor Vial:</span>
-        <span class="meta-value">OpenStreetMap / Overpass</span>
+        <span class="meta-label">Cartografía:</span>
+        <span class="meta-value">OpenStreetMap</span>
       </span>
       <span class="meta-separator">|</span>
       <span class="meta-item">
-        <span class="meta-label">Comparativa:</span>
+        <span class="meta-label">Modelos:</span>
         <span class="meta-value">GA / PSO / ACO</span>
       </span>
     </div>
   </header>
 
   <div class="layout-body">
+    <!-- Panel de Despacho Lateral -->
     <aside class="sidebar">
       
-      <!-- Centro de Distribución -->
-      <section class="control-section" aria-labelledby="heading-hub">
-        <div class="section-header">
-          <h2 id="heading-hub" class="section-title">Centro de Distribución (Hub)</h2>
-          <span class="status-badge hub-badge">Base Operativa</span>
-        </div>
-        <div class="hub-details">
-          <div class="detail-row">
-            <span class="detail-label">Coordenadas:</span>
-            <code id="hub-coords" class="detail-value">25.7250, -100.3130</code>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">Ubicación:</span>
-            <span id="hub-name" class="detail-value">Área Metropolitana Norte</span>
-          </div>
-        </div>
-        <p class="section-note">
-          El marcador de la base puede reposicionarse directamente arrastrándolo en el mapa.
-        </p>
-      </section>
+      <!-- Navegación de pestañas del panel lateral -->
+      <nav class="sidebar-tabs" role="tablist" aria-label="Secciones de despacho">
+        <button type="button" class="tab-btn active" id="tab-btn-orders" role="tab" aria-selected="true" aria-controls="tab-content-orders">
+          Órdenes (<span id="tab-orders-badge">0</span>)
+        </button>
+        <button type="button" class="tab-btn" id="tab-btn-params" role="tab" aria-selected="false" aria-controls="tab-content-params">
+          Jornada y Base
+        </button>
+        <button type="button" class="tab-btn" id="tab-btn-results" role="tab" aria-selected="false" aria-controls="tab-content-results">
+          Métricas
+        </button>
+      </nav>
 
-      <!-- Restricción de Turno -->
-      <section class="control-section" aria-labelledby="heading-shift">
-        <div class="section-header">
-          <h2 id="heading-shift" class="section-title">Parámetros de Jornada</h2>
-        </div>
-        <div class="input-grid">
-          <div class="field-group">
-            <label for="input-shift-hours" class="field-label">Límite de turno (horas)</label>
-            <input type="number" id="input-shift-hours" class="field-input" value="8" min="1" max="16" step="0.5">
-          </div>
-          <div class="field-group">
-            <label for="input-service-time" class="field-label">Atención por orden (min)</label>
-            <input type="number" id="input-service-time" class="field-input" value="12" min="1" max="60" step="1">
-          </div>
-        </div>
-      </section>
+      <!-- Pestaña 1: Cola de Órdenes -->
+      <div id="tab-content-orders" class="tab-pane active" role="tabpanel" aria-labelledby="tab-btn-orders">
+        
+        <div class="orders-toolbar">
+          <form id="form-add-order" class="address-input-group" onsubmit="event.preventDefault();">
+            <label for="input-address" class="field-label">Nueva parada de entrega</label>
+            <div class="input-with-button">
+              <input type="text" id="input-address" class="field-input" placeholder="Dirección en OpenStreetMap..." autocomplete="off">
+              <button type="submit" id="btn-add-address" class="btn btn-secondary">
+                Agregar
+              </button>
+            </div>
+          </form>
 
-      <!-- Receptor de Órdenes -->
-      <section class="control-section orders-section" aria-labelledby="heading-orders">
-        <div class="section-header">
-          <h2 id="heading-orders" class="section-title">Órdenes de Entrega</h2>
-          <span id="order-count-badge" class="count-badge">0 órdenes</span>
-        </div>
-
-        <form id="form-add-order" class="address-form" onsubmit="event.preventDefault();">
-          <label for="input-address" class="field-label">Dirección para geocodificación (Nominatim)</label>
-          <div class="input-action-row">
-            <input type="text" id="input-address" class="field-input" placeholder="Ej. Av. Universidad, San Nicolás" autocomplete="off">
-            <button type="submit" id="btn-add-address" class="btn btn-secondary">
-              Agregar
+          <div class="quick-actions-bar">
+            <button type="button" id="btn-sample-orders" class="btn btn-utility">
+              Cargar 10 órdenes de prueba
+            </button>
+            <button type="button" id="btn-clear-orders" class="btn btn-utility btn-danger-ghost">
+              Limpiar
             </button>
           </div>
-        </form>
 
-        <div class="utility-actions">
-          <button type="button" id="btn-sample-orders" class="btn btn-utility">
-            Generar conjunto de prueba
-          </button>
-          <button type="button" id="btn-clear-orders" class="btn btn-utility btn-danger-ghost">
-            Limpiar lista
-          </button>
+          <div class="map-helper-tip">
+            Haga clic en cualquier punto del mapa para insertar una orden directamente.
+          </div>
         </div>
 
-        <p class="section-note">
-          Hacer clic sobre cualquier calle del mapa registra un nuevo punto de entrega.
-        </p>
-
-        <div class="order-container">
+        <div class="orders-scroll-container">
           <div id="order-empty-state" class="empty-state">
-            <p>No hay órdenes registradas.</p>
+            <p>Cola de despacho vacía.</p>
             <span>Ingrese una dirección o marque coordenadas sobre el mapa.</span>
           </div>
-          <ol id="order-list-items" class="order-list" aria-label="Lista de órdenes registradas"></ol>
+          <ol id="order-list-items" class="order-list" aria-label="Lista de paradas"></ol>
         </div>
-      </section>
 
-      <!-- Acción principal -->
-      <div class="action-footer">
-        <button type="button" id="btn-run-simulation" class="btn btn-primary" disabled>
-          Iniciar Simulación y Comparativa
-        </button>
+        <div class="sidebar-action-footer">
+          <button type="button" id="btn-run-simulation" class="btn btn-primary" disabled>
+            Optimizar Ruta y Comparar Algoritmos
+          </button>
+        </div>
+      </div>
+
+      <!-- Pestaña 2: Configuración de Jornada y Hub -->
+      <div id="tab-content-params" class="tab-pane" role="tabpanel" aria-labelledby="tab-btn-params">
+        
+        <div class="param-card">
+          <div class="card-header">
+            <h3 class="card-title">Centro de Distribución (Hub)</h3>
+            <span class="hub-tag">Base Operativa</span>
+          </div>
+          <div class="hub-info-rows">
+            <div class="info-row">
+              <span class="info-label">Coordenadas:</span>
+              <code id="hub-coords" class="info-code">25.7250, -100.3130</code>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Referencia:</span>
+              <span id="hub-name" class="info-text">Área Metropolitana Norte</span>
+            </div>
+          </div>
+          <p class="field-hint">
+            Arrastre el pin rojo en el mapa para ubicar la base de salida y retorno de la flota.
+          </p>
+        </div>
+
+        <div class="param-card">
+          <div class="card-header">
+            <h3 class="card-title">Restricciones de Jornada Laboral</h3>
+          </div>
+          <div class="field-stack">
+            <div class="form-row">
+              <label for="input-shift-hours" class="field-label">Duración máxima de turno (horas)</label>
+              <input type="number" id="input-shift-hours" class="field-input" value="8" min="1" max="16" step="0.5">
+            </div>
+            <div class="form-row">
+              <label for="input-service-time" class="field-label">Tiempo de atención por paquete (minutos)</label>
+              <input type="number" id="input-service-time" class="field-input" value="12" min="1" max="60" step="1">
+            </div>
+            <div class="form-row">
+              <label for="input-buffer-time" class="field-label">Margen de seguridad para retorno (minutos)</label>
+              <input type="number" id="input-buffer-time" class="field-input" value="15" min="0" max="60" step="5">
+            </div>
+          </div>
+          <p class="field-hint">
+            El motor asegurará que el tiempo de traslado más el tiempo de atención y el retorno al Hub no exceda la jornada.
+          </p>
+        </div>
+
+      </div>
+
+      <!-- Pestaña 3: Resultados y Comparativa -->
+      <div id="tab-content-results" class="tab-pane" role="tabpanel" aria-labelledby="tab-btn-results">
+        
+        <div id="results-empty-notice" class="empty-state">
+          <p>No se han ejecutado simulaciones.</p>
+          <span>Cargue órdenes y ejecute el optimizador para visualizar las métricas comparativas.</span>
+        </div>
+
+        <div id="results-content" style="display: none;">
+          <div class="benchmark-summary-bar">
+            <div class="summary-stat">
+              <span class="stat-label">Algoritmo con menor distancia:</span>
+              <strong id="stat-best-distance" class="stat-value text-accent">--</strong>
+            </div>
+            <div class="summary-stat">
+              <span class="stat-label">Tasa de cumplimiento de turno:</span>
+              <strong id="stat-fulfillment" class="stat-value">--</strong>
+            </div>
+          </div>
+
+          <div class="cards-vertical-stack">
+            <article class="metric-card card-ga" id="side-card-ga"></article>
+            <article class="metric-card card-pso" id="side-card-pso"></article>
+            <article class="metric-card card-aco" id="side-card-aco"></article>
+          </div>
+
+          <div class="chart-box">
+            <div class="chart-header">
+              <span class="chart-title">Convergencia de Coste por Iteración</span>
+            </div>
+            <div class="chart-canvas-wrapper">
+              <canvas id="chart-convergence" role="img" aria-label="Curvas de convergencia"></canvas>
+            </div>
+          </div>
+
+          <div class="schedule-section">
+            <h4 class="schedule-heading">Itinerario de Paradas (Mejor Algoritmo)</h4>
+            <div id="schedule-timeline" class="timeline-container"></div>
+          </div>
+        </div>
+
       </div>
 
     </aside>
 
+    <!-- Visor Cartográfico Principal -->
     <main class="map-viewport">
-      <div id="map" role="region" aria-label="Mapa interactivo de rutas de distribución"></div>
+      <div id="map" role="region" aria-label="Mapa interactivo de despacho"></div>
 
-      <!-- Selector de visualización de rutas -->
-      <div class="route-layers-panel" role="toolbar" aria-label="Control de capas de algoritmos">
-        <span class="layers-title">Rutas calculadas</span>
-        <label class="layer-control">
-          <input type="checkbox" id="toggle-ga" checked>
-          <span class="color-key ga-key" aria-hidden="true"></span>
-          <span>Genético (GA)</span>
-        </label>
-        <label class="layer-control">
-          <input type="checkbox" id="toggle-pso" checked>
-          <span class="color-key pso-key" aria-hidden="true"></span>
-          <span>Enjambre (PSO)</span>
-        </label>
-        <label class="layer-control">
-          <input type="checkbox" id="toggle-aco" checked>
-          <span class="color-key aco-key" aria-hidden="true"></span>
-          <span>Hormigas (ACO)</span>
-        </label>
+      <!-- Panel flotante de capas de rutas -->
+      <div class="map-floating-overlay" role="toolbar" aria-label="Capas de algoritmos">
+        <div class="overlay-header">
+          <span class="overlay-title">Rutas de Entrega</span>
+        </div>
+        <div class="overlay-toggles">
+          <label class="route-toggle">
+            <input type="checkbox" id="toggle-ga" checked>
+            <span class="route-color-pill ga-color" aria-hidden="true"></span>
+            <span class="route-name">Genético (GA)</span>
+            <span id="pill-km-ga" class="route-km-pill">-- km</span>
+          </label>
+          <label class="route-toggle">
+            <input type="checkbox" id="toggle-pso" checked>
+            <span class="route-color-pill pso-color" aria-hidden="true"></span>
+            <span class="route-name">Enjambre (PSO)</span>
+            <span id="pill-km-pso" class="route-km-pill">-- km</span>
+          </label>
+          <label class="route-toggle">
+            <input type="checkbox" id="toggle-aco" checked>
+            <span class="route-color-pill aco-color" aria-hidden="true"></span>
+            <span class="route-name">Hormigas (ACO)</span>
+            <span id="pill-km-aco" class="route-km-pill">-- km</span>
+          </label>
+        </div>
       </div>
 
-      <!-- Panel inferior de resultados -->
-      <section id="results-panel" class="results-dock" aria-labelledby="heading-results" aria-hidden="true">
-        <div class="results-header">
-          <div class="results-header-text">
-            <h3 id="heading-results" class="results-title">Evaluación Comparativa de Metaheurísticas</h3>
-            <p class="results-subtext">Restricción uniforme de jornada con retorno forzado al Centro de Distribución.</p>
-          </div>
-          <button type="button" id="btn-close-results" class="btn-icon" aria-label="Cerrar panel de resultados">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </div>
-
-        <div class="results-content-grid">
-          <article class="metric-card card-ga" id="card-ga"></article>
-          <article class="metric-card card-pso" id="card-pso"></article>
-          <article class="metric-card card-aco" id="card-aco"></article>
-          <div class="chart-container">
-            <canvas id="chart-convergence" aria-label="Gráfica de convergencia del coste" role="img"></canvas>
-          </div>
-        </div>
-      </section>
+      <!-- Barra flotante inferior de estado del despacho -->
+      <div id="map-status-dock" class="map-status-dock">
+        <span id="dock-status-message">Modo de edición activo. Agregue órdenes o ejecute el optimizador.</span>
+        <button type="button" id="btn-dock-view-metrics" class="btn btn-utility" style="display: none;">
+          Ver reporte comparativo
+        </button>
+      </div>
     </main>
   </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" integrity="sha512-BwHfrr4c9kmRuvxDBmgebGb8tihJYB8bp957327383182838328198==" crossorigin=""></script>
+  <!-- Scripts -->
+  <script src="/static/vendor/leaflet/leaflet.js"></script>
   <script src="/static/js/map.js"></script>
   <script src="/static/js/app.js"></script>
 </body>
