@@ -20,28 +20,17 @@ class RouteEvaluator:
         self.max_shift_min = shift.max_hours * 60.0
 
     def evaluate_sequence(self, sequence: List[int]) -> Tuple[float, int, float, float]:
-        """
-        Dada una permutación de índices de órdenes (1-based index):
-        Determina cuántas órdenes caben en la jornada laboral y calcula el coste.
-        Retorna (fitness, ordenes_entregadas, distancia_km, tiempo_min).
-        """
-        current_node = 0  # 0 es el Hub
+        current_node = 0
         elapsed_time = 0.0
         total_distance = 0.0
         delivered_count = 0
 
         for order_idx in sequence:
-            # Tiempo de viaje al siguiente punto
             travel_time = self.time_matrix[current_node][order_idx]
             travel_dist = self.dist_matrix[current_node][order_idx]
-
-            # Tiempo de servicio en la entrega
             service_time = self.orders[order_idx - 1].service_time_min
-
-            # Tiempo de retorno al Hub desde ese nuevo punto
             return_time = self.time_matrix[order_idx][0]
 
-            # Verificar si cabe en la jornada laboral con el retorno incluido
             projected_total = elapsed_time + travel_time + service_time + return_time + self.shift.buffer_time_min
             if projected_total <= self.max_shift_min:
                 elapsed_time += travel_time + service_time
@@ -49,17 +38,11 @@ class RouteEvaluator:
                 current_node = order_idx
                 delivered_count += 1
             else:
-                # No alcanza el tiempo para entregar este paquete y regresar seguro
                 break
 
-        # Regreso final al Hub desde el último nodo atendido
         total_distance += self.dist_matrix[current_node][0]
         elapsed_time += self.time_matrix[current_node][0]
 
-        # Función de fitness:
-        # Prioridad 1: Maximizar órdenes entregadas (gran bonificación negativa al coste)
-        # Prioridad 2: Minimizar distancia recorrida
-        # Coste menor = mejor solución
         unassigned_penalty = (len(sequence) - delivered_count) * 1000.0
         fitness = total_distance + unassigned_penalty
 
@@ -67,7 +50,6 @@ class RouteEvaluator:
 
     def build_result(self, algorithm_name: str, best_sequence: List[int],
                      convergence_curve: List[float], execution_time: float) -> AlgorithmResult:
-        """Construye el objeto detallado de resultado para el frontend y Leaflet."""
         current_node = 0
         elapsed_time = 0.0
         total_dist_km = 0.0
@@ -100,7 +82,6 @@ class RouteEvaluator:
                     travel_time_from_prev_min=round(travel_time, 1)
                 ))
 
-                # Segmento de polilínea geométrica
                 seg = self.path_geometries.get((current_node, order_idx), [])
                 if seg:
                     if full_polyline and full_polyline[-1] == seg[0]:
@@ -117,7 +98,6 @@ class RouteEvaluator:
             else:
                 break
 
-        # Tramo de retorno al Hub
         return_dist = self.dist_matrix[current_node][0]
         return_time = self.time_matrix[current_node][0]
         total_dist_km += return_dist

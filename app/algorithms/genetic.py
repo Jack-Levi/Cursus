@@ -5,7 +5,6 @@ from app.algorithms.base import RouteEvaluator
 from app.models.schemas import AlgorithmResult
 
 def ordered_crossover(parent1: List[int], parent2: List[int]) -> Tuple[List[int], List[int]]:
-    """Cruce de orden (OX1) para preservar permutaciones válidas sin duplicados."""
     size = len(parent1)
     if size < 3:
         return parent1.copy(), parent2.copy()
@@ -14,11 +13,9 @@ def ordered_crossover(parent1: List[int], parent2: List[int]) -> Tuple[List[int]
 
     def create_child(p1: List[int], p2: List[int]) -> List[int]:
         child = [None] * size
-        # Copiar subsegmento de p1
         child[a:b + 1] = p1[a:b + 1]
         copied = set(child[a:b + 1])
 
-        # Rellenar con los genes de p2 en orden cíclico
         p2_remaining = [gene for gene in p2[b + 1:] + p2[:b + 1] if gene not in copied]
         idx = (b + 1) % size
         for gene in p2_remaining:
@@ -30,17 +27,14 @@ def ordered_crossover(parent1: List[int], parent2: List[int]) -> Tuple[List[int]
     return create_child(parent1, parent2), create_child(parent2, parent1)
 
 def mutate(individual: List[int], prob_swap: float = 0.5):
-    """Mutación por intercambio o inversión de subsecuencia (2-opt)."""
     size = len(individual)
     if size < 2:
         return
 
     if random.random() < prob_swap:
-        # Intercambio simple de dos posiciones
         i, j = random.sample(range(size), 2)
         individual[i], individual[j] = individual[j], individual[i]
     else:
-        # Inversión de subsecuencia
         i, j = sorted(random.sample(range(size), 2))
         individual[i:j + 1] = reversed(individual[i:j + 1])
 
@@ -49,16 +43,13 @@ def run_genetic_algorithm(evaluator: RouteEvaluator,
                            generations: int = 100,
                            cx_prob: float = 0.85,
                            mut_prob: float = 0.20) -> AlgorithmResult:
-    """Ejecuta el Algoritmo Genético para optimizar la secuencia de entregas."""
     start_time = time.time()
     n_orders = len(evaluator.orders)
 
     if n_orders == 0:
-        return evaluator.build_result("Algoritmo Genético (GA)", [], [0.0], 0.0)
+        return evaluator.build_result("GA", [], [0.0], 0.0)
 
     base_indices = list(range(1, n_orders + 1))
-
-    # Población inicial con diversas permutaciones aleatorias
     population = [random.sample(base_indices, len(base_indices)) for _ in range(pop_size)]
 
     best_individual = population[0]
@@ -66,10 +57,8 @@ def run_genetic_algorithm(evaluator: RouteEvaluator,
     convergence_curve = [best_fitness]
 
     for gen in range(generations):
-        # Evaluación de la población
         fitness_scores = [evaluator.evaluate_sequence(ind)[0] for ind in population]
 
-        # Actualizar mejor global
         for ind, fit in zip(population, fitness_scores):
             if fit < best_fitness:
                 best_fitness = fit
@@ -77,14 +66,13 @@ def run_genetic_algorithm(evaluator: RouteEvaluator,
 
         convergence_curve.append(best_fitness)
 
-        # Selección por torneo
         selected = []
         for _ in range(pop_size):
             candidates = random.sample(list(range(pop_size)), 3)
             winner_idx = min(candidates, key=lambda idx: fitness_scores[idx])
             selected.append(population[winner_idx].copy())
 
-        # Cruce y Mutación (con Elitismo de 2 individuos)
+        # Elitismo: conservar los dos mejores individuos
         new_population = [best_individual.copy(), best_individual.copy()]
 
         for i in range(2, pop_size, 2):
@@ -108,4 +96,4 @@ def run_genetic_algorithm(evaluator: RouteEvaluator,
         population = new_population[:pop_size]
 
     exec_time = time.time() - start_time
-    return evaluator.build_result("Algoritmo Genético (GA)", best_individual, convergence_curve, exec_time)
+    return evaluator.build_result("GA", best_individual, convergence_curve, exec_time)

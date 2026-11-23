@@ -5,21 +5,37 @@ let routeLayerGA;
 let routeLayerPSO;
 let routeLayerACO;
 
-// Icono personalizado para el Centro de Distribución
-const hubIcon = L.divIcon({
-  className: "custom-hub-icon",
-  html: `<div style="background-color: #ef4444; width: 28px; height: 28px; border-radius: 50%; border: 2px solid #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); font-size: 14px;">🏢</div>`,
-  iconSize: [28, 28],
-  iconAnchor: [14, 14]
+// Marcador SVG para el Centro de Distribución
+const hubSvgIcon = L.divIcon({
+  className: "leaflet-hub-marker",
+  html: `
+    <svg width="30" height="36" viewBox="0 0 30 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M15 0C6.71573 0 0 6.71573 0 15C0 24 15 36 15 36C15 36 30 24 30 15C30 6.71573 23.2843 0 15 0Z" fill="#dc2626"/>
+      <path d="M15 2C7.8203 2 2 7.8203 2 15C2 22.5 13.5 32.8 15 34.2C16.5 32.8 28 22.5 28 15C28 7.8203 22.1797 2 15 2Z" fill="#ef4444"/>
+      <rect x="9" y="9" width="12" height="11" rx="1" fill="#ffffff"/>
+      <rect x="11" y="14" width="3" height="6" fill="#dc2626"/>
+      <rect x="16" y="14" width="3" height="6" fill="#dc2626"/>
+    </svg>
+  `,
+  iconSize: [30, 36],
+  iconAnchor: [15, 36],
+  popupAnchor: [0, -34]
 });
 
-// Icono para las órdenes de entrega
-function createOrderIcon(index) {
+// Marcador SVG numerado para órdenes de entrega
+function createOrderSvgIcon(index) {
   return L.divIcon({
-    className: "custom-order-icon",
-    html: `<div style="background-color: #3b82f6; color: #fff; width: 22px; height: 22px; border-radius: 50%; border: 2px solid #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; box-shadow: 0 2px 6px rgba(0,0,0,0.4);">${index}</div>`,
-    iconSize: [22, 22],
-    iconAnchor: [11, 11]
+    className: "leaflet-order-marker",
+    html: `
+      <svg width="24" height="30" viewBox="0 0 24 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 0C5.37258 0 0 5.37258 0 12C0 19.5 12 30 12 30C12 30 24 19.5 24 12C24 5.37258 18.6274 0 12 0Z" fill="#1d4ed8"/>
+        <circle cx="12" cy="11" r="9" fill="#2563eb"/>
+        <text x="12" y="14" fill="#ffffff" font-size="10" font-weight="700" text-anchor="middle" font-family="-apple-system, sans-serif">${index}</text>
+      </svg>
+    `,
+    iconSize: [24, 30],
+    iconAnchor: [12, 30],
+    popupAnchor: [0, -28]
   });
 }
 
@@ -30,32 +46,28 @@ function initMap(initialLat, initialLon) {
 
   L.control.zoom({ position: "bottomright" }).addTo(map);
 
-  // OpenStreetMap Tiles con filtro cálido vía CSS
   L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
   }).addTo(map);
 
-  // Grupos de capas
   ordersLayer = L.featureGroup().addTo(map);
   routeLayerGA = L.featureGroup().addTo(map);
   routeLayerPSO = L.featureGroup().addTo(map);
   routeLayerACO = L.featureGroup().addTo(map);
 
-  // Marcador del Centro de Distribución (Hub)
   hubMarker = L.marker([initialLat, initialLon], {
-    icon: hubIcon,
+    icon: hubSvgIcon,
     draggable: true
   }).addTo(map);
 
-  hubMarker.bindPopup("<b>Centro de Distribución (Hub)</b><br>Arrastra para reubicar").openPopup();
+  hubMarker.bindPopup("<strong>Centro de Distribución</strong><br>Arrastre el marcador para reubicar la base.");
 
   hubMarker.on("dragend", function (e) {
     const pos = e.target.getLatLng();
     window.onHubMoved(pos.lat, pos.lng);
   });
 
-  // Clic en el mapa para agregar orden
   map.on("click", function (e) {
     window.onMapClicked(e.latlng.lat, e.latlng.lng);
   });
@@ -65,26 +77,26 @@ function renderOrdersOnMap(orders) {
   ordersLayer.clearLayers();
   orders.forEach((order, idx) => {
     const marker = L.marker([order.lat, order.lon], {
-      icon: createOrderIcon(idx + 1)
+      icon: createOrderSvgIcon(idx + 1)
     });
-    marker.bindPopup(`<b>Orden #${idx + 1}</b><br>${order.address || "Sin dirección"}<br><small>${order.service_time_min} min de entrega</small>`);
+    marker.bindPopup(`<strong>Orden ${idx + 1}</strong><br>${order.address || "Coordenada registrada"}<br>Tiempo de atención: ${order.service_time_min} min`);
     ordersLayer.addLayer(marker);
   });
 
   if (orders.length > 0) {
     const group = L.featureGroup([hubMarker, ordersLayer]);
-    map.fitBounds(group.getBounds().pad(0.15));
+    map.fitBounds(group.getBounds().pad(0.12));
   }
 }
 
-function drawRoute(layer, coordinates, color, weight = 4, dashArray = null) {
+function drawRoute(layer, coordinates, color, weight = 3.5, dashArray = null) {
   layer.clearLayers();
   if (!coordinates || coordinates.length < 2) return;
 
   const polyline = L.polyline(coordinates, {
     color: color,
     weight: weight,
-    opacity: 0.85,
+    opacity: 0.9,
     dashArray: dashArray,
     smoothFactor: 1.0
   });

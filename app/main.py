@@ -19,25 +19,22 @@ from app.algorithms.pso import run_pso_algorithm
 from app.algorithms.aco import run_aco_algorithm
 
 app = FastAPI(
-    title="Cursus - Optimización de Despacho y Logística",
-    description="Simulador de centro de distribución y comparador de metaheurísticas (GA, PSO, ACO)",
+    title="Cursus: Motor de Optimización y Ruteo Logístico",
+    description="Simulador de centro de distribución y evaluación comparativa entre GA, PSO y ACO sobre OpenStreetMap.",
     version="1.0.0"
 )
 
-# Montar archivos estáticos
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 templates_dir = os.path.join(os.path.dirname(__file__), "templates")
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 @app.get("/")
 def serve_home():
-    """Entrega la interfaz principal de la aplicación."""
     index_path = os.path.join(templates_dir, "index.html")
     return FileResponse(index_path)
 
 @app.get("/api/config")
 def get_default_config():
-    """Retorna los parámetros predeterminados del Hub y la jornada."""
     return {
         "hub": {
             "name": DEFAULT_HUB_NAME,
@@ -53,10 +50,9 @@ def get_default_config():
 
 @app.post("/api/geocode", response_model=GeocodeResponse)
 def api_geocode(request: GeocodeRequest):
-    """Geocodifica una dirección escrita a coordenadas (lat, lon) mediante Nominatim."""
     result = geocode_address(request.address)
     if not result:
-        raise HTTPException(status_code=404, detail="No se encontró la dirección especificada")
+        raise HTTPException(status_code=404, detail="No se encontró la dirección especificada en OpenStreetMap.")
     return GeocodeResponse(
         address=request.address,
         lat=result["lat"],
@@ -66,19 +62,11 @@ def api_geocode(request: GeocodeRequest):
 
 @app.get("/api/reverse-geocode")
 def api_reverse_geocode(lat: float, lon: float):
-    """Obtiene la dirección legible de un punto en el mapa."""
     name = reverse_geocode(lat, lon)
     return {"lat": lat, "lon": lon, "display_name": name}
 
 @app.post("/api/optimize", response_model=ComparisonResponse)
 def api_optimize(req: OptimizationRequest):
-    """
-    Ejecuta el ciclo completo de simulación:
-    1. Construye el grafo vial sobre OpenStreetMap (Overpass API + Dijkstra).
-    2. Genera matrices de distancia y tiempo reales.
-    3. Evalúa la restricción de jornada laboral.
-    4. Ejecuta GA, PSO y ACO bajo condiciones idénticas.
-    """
     if len(req.orders) == 0:
         raise HTTPException(status_code=400, detail="Debe ingresar al menos una orden para optimizar.")
 
@@ -86,16 +74,13 @@ def api_optimize(req: OptimizationRequest):
     order_coords = [(o.lat, o.lon) for o in req.orders]
     all_coords = [hub_coord] + order_coords
 
-    # Paso 1: Consultar red vial real
     road_network = RoadNetwork()
     osm_data = fetch_street_network(all_coords)
     if osm_data:
         road_network.build_from_overpass(osm_data)
 
-    # Paso 2: Generar matrices de coste mediante caminos mínimos
     dist_matrix, time_matrix, path_geoms = build_cost_matrices(hub_coord, order_coords, road_network)
 
-    # Paso 3: Inicializar evaluador con restricciones de jornada
     evaluator = RouteEvaluator(
         hub=req.hub,
         orders=req.orders,
@@ -105,7 +90,6 @@ def api_optimize(req: OptimizationRequest):
         shift=req.shift
     )
 
-    # Paso 4: Ejecutar metaheurísticas
     res_ga = run_genetic_algorithm(
         evaluator=evaluator,
         pop_size=req.params.ga_population_size,
@@ -139,7 +123,6 @@ def api_optimize(req: OptimizationRequest):
         "ACO": res_aco
     }
 
-    # Determinar mejores algoritmos
     best_dist_algo = min(results_dict.keys(), key=lambda k: results_dict[k].total_distance_km)
     best_deliv_algo = max(results_dict.keys(), key=lambda k: results_dict[k].orders_delivered)
 

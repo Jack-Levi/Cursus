@@ -4,16 +4,13 @@ from typing import List, Tuple
 from app.algorithms.base import RouteEvaluator
 from app.models.schemas import AlgorithmResult
 
-# Un operador de intercambio (Swap Operator) representa un cambio de posiciones (idx1, idx2)
 SwapOperator = Tuple[int, int]
 
 def get_swap_sequence(source: List[int], target: List[int]) -> List[SwapOperator]:
-    """Determina la secuencia de intercambios necesaria para transformar 'source' en 'target'."""
     src = source.copy()
     swaps: List[SwapOperator] = []
     for i in range(len(src)):
         if src[i] != target[i]:
-            # Buscar dónde está target[i] en src
             target_val = target[i]
             target_idx = src.index(target_val)
             src[i], src[target_idx] = src[target_idx], src[i]
@@ -21,15 +18,12 @@ def get_swap_sequence(source: List[int], target: List[int]) -> List[SwapOperator
     return swaps
 
 def apply_swaps(position: List[int], swaps: List[SwapOperator]) -> List[int]:
-    """Aplica una lista de intercambios a una permutación."""
     pos = position.copy()
     for i, j in swaps:
         pos[i], pos[j] = pos[j], pos[i]
     return pos
 
 class Particle:
-    """Partícula en el espacio discreto de permutaciones."""
-
     def __init__(self, base_indices: List[int]):
         self.position = random.sample(base_indices, len(base_indices))
         self.pbest_position = self.position.copy()
@@ -42,12 +36,11 @@ def run_pso_algorithm(evaluator: RouteEvaluator,
                       w: float = 0.7,
                       c1: float = 1.4,
                       c2: float = 1.4) -> AlgorithmResult:
-    """Ejecuta Optimización por Enjambre de Partículas Discreto (DPSO) para ruteo logístico."""
     start_time = time.time()
     n_orders = len(evaluator.orders)
 
     if n_orders == 0:
-        return evaluator.build_result("Enjambre de Partículas (PSO)", [], [0.0], 0.0)
+        return evaluator.build_result("PSO", [], [0.0], 0.0)
 
     base_indices = list(range(1, n_orders + 1))
     swarm = [Particle(base_indices) for _ in range(n_particles)]
@@ -56,7 +49,6 @@ def run_pso_algorithm(evaluator: RouteEvaluator,
     gbest_fitness = float("inf")
     convergence_curve: List[float] = []
 
-    # Inicializar mejores locales y global
     for particle in swarm:
         fit, _, _, _ = evaluator.evaluate_sequence(particle.position)
         particle.pbest_fitness = fit
@@ -68,29 +60,23 @@ def run_pso_algorithm(evaluator: RouteEvaluator,
 
     for it in range(iterations):
         for particle in swarm:
-            # 1. Componente inercial: conservar swaps previos con probabilidad w
             new_velocity: List[SwapOperator] = [
                 so for so in particle.velocity if random.random() < w
             ]
 
-            # 2. Componente cognitivo: swaps hacia pbest con probabilidad c1
             cognitive_swaps = get_swap_sequence(particle.position, particle.pbest_position)
             for so in cognitive_swaps:
                 if random.random() < (c1 / 2.0):
                     new_velocity.append(so)
 
-            # 3. Componente social: swaps hacia gbest con probabilidad c2
             social_swaps = get_swap_sequence(particle.position, gbest_position)
             for so in social_swaps:
                 if random.random() < (c2 / 2.0):
                     new_velocity.append(so)
 
             particle.velocity = new_velocity
-
-            # 4. Actualizar posición aplicando la velocidad
             particle.position = apply_swaps(particle.position, particle.velocity)
 
-            # 5. Evaluar nuevo estado
             fit, _, _, _ = evaluator.evaluate_sequence(particle.position)
 
             if fit < particle.pbest_fitness:
@@ -104,4 +90,4 @@ def run_pso_algorithm(evaluator: RouteEvaluator,
         convergence_curve.append(gbest_fitness)
 
     exec_time = time.time() - start_time
-    return evaluator.build_result("Enjambre de Partículas (PSO)", gbest_position, convergence_curve, exec_time)
+    return evaluator.build_result("PSO", gbest_position, convergence_curve, exec_time)

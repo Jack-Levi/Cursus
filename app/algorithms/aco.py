@@ -11,19 +11,15 @@ def run_aco_algorithm(evaluator: RouteEvaluator,
                       beta: float = 2.5,
                       rho: float = 0.1,
                       q: float = 100.0) -> AlgorithmResult:
-    """Ejecuta Optimización por Colonia de Hormigas (ACO) sobre la red vial."""
     start_time = time.time()
     n_orders = len(evaluator.orders)
 
     if n_orders == 0:
-        return evaluator.build_result("Colonia de Hormigas (ACO)", [], [0.0], 0.0)
+        return evaluator.build_result("ACO", [], [0.0], 0.0)
 
-    total_nodes = n_orders + 1  # 0 es el Hub, 1..n_orders son las entregas
-
-    # Inicialización de matriz de feromonas (tau)
+    total_nodes = n_orders + 1
     tau = [[1.0] * total_nodes for _ in range(total_nodes)]
 
-    # Heurística de visibilidad eta = 1 / distancia (a mayor cercanía, mayor deseabilidad)
     eta = [[0.0] * total_nodes for _ in range(total_nodes)]
     for i in range(total_nodes):
         for j in range(total_nodes):
@@ -41,18 +37,15 @@ def run_aco_algorithm(evaluator: RouteEvaluator,
 
         for ant in range(n_ants):
             unvisited = set(range(1, total_nodes))
-            current_node = 0  # Inicia en el Hub
+            current_node = 0
             tour: List[int] = []
 
             while unvisited:
-                # Calcular probabilidades de transición
-                probabilities = []
                 nodes_list = list(unvisited)
-                weights = []
-
-                for next_node in nodes_list:
-                    p_val = (tau[current_node][next_node] ** alpha) * (eta[current_node][next_node] ** beta)
-                    weights.append(p_val)
+                weights = [
+                    (tau[current_node][nxt] ** alpha) * (eta[current_node][nxt] ** beta)
+                    for nxt in nodes_list
+                ]
 
                 total_weight = sum(weights)
                 if total_weight > 0:
@@ -74,25 +67,19 @@ def run_aco_algorithm(evaluator: RouteEvaluator,
 
         convergence_curve.append(gbest_fitness)
 
-        # Evaporación de feromonas
+        # Evaporación acotada para evitar estancamiento prematuro
         for i in range(total_nodes):
             for j in range(total_nodes):
-                tau[i][j] *= (1.0 - rho)
-                if tau[i][j] < 0.01:
-                    tau[i][j] = 0.01  # Límite mínimo para evitar estancamiento
+                tau[i][j] = max(0.01, tau[i][j] * (1.0 - rho))
 
-        # Depósito de feromonas por las hormigas de la iteración
         for tour, fit in zip(iteration_tours, iteration_fitnesses):
             delta = q / (fit + 1e-3)
-            # Arco del Hub al primer nodo
             tau[0][tour[0]] += delta
-            # Arcos entre entregas sucesivas
             for idx in range(len(tour) - 1):
                 tau[tour[idx]][tour[idx + 1]] += delta
-            # Arco del último nodo de regreso al Hub
             tau[tour[-1]][0] += delta
 
-        # Depósito adicional de refuerzo en el mejor camino global (Elitist Ant)
+        # Refuerzo sobre el óptimo global (sistema elitista)
         best_delta = (q * 2.0) / (gbest_fitness + 1e-3)
         tau[0][gbest_tour[0]] += best_delta
         for idx in range(len(gbest_tour) - 1):
@@ -100,4 +87,4 @@ def run_aco_algorithm(evaluator: RouteEvaluator,
         tau[gbest_tour[-1]][0] += best_delta
 
     exec_time = time.time() - start_time
-    return evaluator.build_result("Colonia de Hormigas (ACO)", gbest_tour, convergence_curve, exec_time)
+    return evaluator.build_result("ACO", gbest_tour, convergence_curve, exec_time)

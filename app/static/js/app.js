@@ -1,26 +1,28 @@
-// Estado de la aplicación
 const state = {
-  hub: { name: "Centro de Distribución Cursus", lat: 25.7250, lon: -100.3130 },
+  hub: { name: "Centro de Distribución Cursus Norte", lat: 25.7250, lon: -100.3130 },
   orders: [],
   shift: { max_hours: 8.0, service_time_per_order_min: 12.0, buffer_time_min: 15.0 },
   convergenceChart: null
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
-  // Cargar configuración inicial
   try {
     const res = await fetch("/api/config");
-    const data = await res.json();
-    state.hub = data.hub;
-    state.shift = data.shift;
+    if (res.ok) {
+      const data = await res.json();
+      state.hub = data.hub;
+      state.shift = data.shift;
+    }
   } catch (e) {
-    console.warn("Usando configuración predeterminada local", e);
+    console.warn("Error cargando configuración remota. Utilizando valores locales.", e);
   }
 
-  // Inicializar mapa
+  document.getElementById("hub-coords").innerText = `${state.hub.lat.toFixed(4)}, ${state.hub.lon.toFixed(4)}`;
+  document.getElementById("hub-name").innerText = state.hub.name;
+
   initMap(state.hub.lat, state.hub.lon);
 
-  // Vincular eventos del DOM
+  // Formularios y botones
   document.getElementById("btn-add-address").addEventListener("click", handleAddAddress);
   document.getElementById("input-address").addEventListener("keypress", (e) => {
     if (e.key === "Enter") handleAddAddress();
@@ -28,54 +30,61 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("btn-sample-orders").addEventListener("click", generateSampleOrders);
   document.getElementById("btn-clear-orders").addEventListener("click", clearAllOrders);
   document.getElementById("btn-run-simulation").addEventListener("click", runSimulation);
+  document.getElementById("btn-close-results").addEventListener("click", () => {
+    document.getElementById("results-panel").classList.remove("active");
+  });
 
-  // Filtros de rutas
+  // Capas
   document.getElementById("toggle-ga").addEventListener("change", (e) => toggleRouteLayer("GA", e.target.checked));
   document.getElementById("toggle-pso").addEventListener("change", (e) => toggleRouteLayer("PSO", e.target.checked));
   document.getElementById("toggle-aco").addEventListener("change", (e) => toggleRouteLayer("ACO", e.target.checked));
 
-  // Generar 8 órdenes de muestra iniciales para que el usuario pueda probar de inmediato
   generateSampleOrders();
 });
 
-// Evento: Hub movido en el mapa
 window.onHubMoved = async (lat, lon) => {
   state.hub.lat = lat;
   state.hub.lon = lon;
-  try {
-    const res = await fetch(`/api/reverse-geocode?lat=${lat}&lon=${lon}`);
-    const data = await res.json();
-    state.hub.name = data.display_name;
-  } catch (e) {
-    state.hub.name = `Hub (${lat.toFixed(4)}, ${lon.toFixed(4)})`;
-  }
-  document.getElementById("hub-location-label").innerText = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
-};
+  document.getElementById("hub-coords").innerText = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
 
-// Evento: Clic en el mapa para agregar orden
-window.onMapClicked = async (lat, lon) => {
-  let display = `Entrega (${lat.toFixed(4)}, ${lon.toFixed(4)})`;
   try {
     const res = await fetch(`/api/reverse-geocode?lat=${lat}&lon=${lon}`);
-    const data = await res.json();
-    if (data.display_name) {
-      display = data.display_name.split(",").slice(0, 3).join(",");
+    if (res.ok) {
+      const data = await res.json();
+      state.hub.name = data.display_name;
+      document.getElementById("hub-name").innerText = data.display_name;
     }
   } catch (e) {
-    // Si falla el reverse, mantener etiqueta básica
+    state.hub.name = `Base (${lat.toFixed(4)}, ${lon.toFixed(4)})`;
+    document.getElementById("hub-name").innerText = state.hub.name;
+  }
+};
+
+window.onMapClicked = async (lat, lon) => {
+  let display = `Punto (${lat.toFixed(4)}, ${lon.toFixed(4)})`;
+  try {
+    const res = await fetch(`/api/reverse-geocode?lat=${lat}&lon=${lon}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.display_name) {
+        display = data.display_name.split(",").slice(0, 3).join(",");
+      }
+    }
+  } catch (e) {
+    // Mantener etiqueta de coordenadas
   }
 
   addOrder(lat, lon, display);
 };
 
-// Agregar orden por texto
 async function handleAddAddress() {
   const input = document.getElementById("input-address");
   const address = input.value.trim();
   if (!address) return;
 
   const btn = document.getElementById("btn-add-address");
-  btn.innerText = "Buscando...";
+  const originalText = btn.innerText;
+  btn.innerText = "Consultando...";
   btn.disabled = true;
 
   try {
@@ -86,7 +95,7 @@ async function handleAddAddress() {
     });
 
     if (!res.ok) {
-      alert("No se encontró la dirección indicada en OpenStreetMap.");
+      alert("No se encontró la dirección en OpenStreetMap.");
       return;
     }
 
@@ -94,9 +103,9 @@ async function handleAddAddress() {
     addOrder(data.lat, data.lon, data.display_name.split(",").slice(0, 3).join(","));
     input.value = "";
   } catch (e) {
-    alert("Error de conexión al geocodificar dirección.");
+    alert("Error de conexión al geocodificar.");
   } finally {
-    btn.innerText = "Agregar";
+    btn.innerText = originalText;
     btn.disabled = false;
   }
 }
@@ -107,7 +116,7 @@ function addOrder(lat, lon, address = "") {
     id: `ORD-${state.orders.length + 1}`,
     lat: lat,
     lon: lon,
-    address: address || `Punto ${state.orders.length + 1}`,
+    address: address || `Orden ${state.orders.length + 1}`,
     service_time_min: serviceTime
   };
   state.orders.push(newOrder);
@@ -116,7 +125,6 @@ function addOrder(lat, lon, address = "") {
 
 function removeOrder(index) {
   state.orders.splice(index, 1);
-  // Reindexar IDs
   state.orders.forEach((o, i) => o.id = `ORD-${i + 1}`);
   updateOrdersUI();
 }
@@ -132,21 +140,20 @@ function generateSampleOrders() {
   clearAllOrders();
   const baseLat = state.hub.lat;
   const baseLon = state.hub.lon;
-  const count = 12;
+  const count = 10;
   const serviceTime = parseFloat(document.getElementById("input-service-time").value) || 12.0;
 
-  // Generar puntos dispersos en un radio aproximado de 3 a 7 km
   for (let i = 1; i <= count; i++) {
-    const angle = (i * 2 * Math.PI) / count + (Math.random() * 0.4 - 0.2);
-    const radius = 0.02 + Math.random() * 0.035; // ~2.5 - 6 km
+    const angle = (i * 2 * Math.PI) / count + (Math.random() * 0.3 - 0.15);
+    const radius = 0.018 + Math.random() * 0.032;
     const lat = baseLat + radius * Math.cos(angle);
-    const lon = baseLon + radius * Math.sin(angle) * 1.1;
+    const lon = baseLon + radius * Math.sin(angle) * 1.15;
 
     state.orders.push({
       id: `ORD-${i}`,
       lat: lat,
       lon: lon,
-      address: `Punto de Entrega #${i}`,
+      address: `Destino ${i}`,
       service_time_min: serviceTime
     });
   }
@@ -158,41 +165,48 @@ function updateOrdersUI() {
   renderOrdersOnMap(state.orders);
 
   const container = document.getElementById("order-list-items");
-  container.innerHTML = "";
+  const emptyState = document.getElementById("order-empty-state");
+  const badge = document.getElementById("order-count-badge");
+  const runBtn = document.getElementById("btn-run-simulation");
 
-  document.getElementById("order-count-badge").innerText = `${state.orders.length} órdenes`;
+  container.innerHTML = "";
+  badge.innerText = `${state.orders.length} órdenes`;
+
+  if (state.orders.length === 0) {
+    emptyState.style.display = "flex";
+    runBtn.disabled = true;
+    return;
+  }
+
+  emptyState.style.display = "none";
+  runBtn.disabled = false;
 
   state.orders.forEach((o, idx) => {
-    const item = document.createElement("div");
-    item.className = "order-item";
-    item.innerHTML = `
-      <div>
-        <strong>#${idx + 1}</strong> <span style="color:#cbd5e1">${o.address}</span>
-      </div>
-      <div style="display:flex; align-items:center; gap:0.5rem">
-        <span style="font-size:0.75rem; color:#94a3b8">${o.service_time_min}m</span>
-        <span class="order-delete" onclick="removeOrder(${idx})">&times;</span>
+    const li = document.createElement("li");
+    li.className = "order-row";
+    li.innerHTML = `
+      <span class="order-row-index">${idx + 1}</span>
+      <span class="order-row-address" title="${o.address}">${o.address}</span>
+      <div class="order-row-meta">
+        <span class="order-time-tag">${o.service_time_min}m</span>
+        <button type="button" class="order-remove-btn" onclick="removeOrder(${idx})" aria-label="Eliminar orden ${idx + 1}">&times;</button>
       </div>
     `;
-    container.appendChild(item);
+    container.appendChild(li);
   });
-
-  const runBtn = document.getElementById("btn-run-simulation");
-  runBtn.disabled = state.orders.length === 0;
 }
 
-// Ejecutar optimización y comparación
 async function runSimulation() {
   if (state.orders.length === 0) return;
 
   const btn = document.getElementById("btn-run-simulation");
-  btn.innerText = "⏳ Consultando Overpass & Optimizando...";
+  const originalText = btn.innerText;
+  btn.innerText = "Consultando red vial y ejecutando optimización...";
   btn.disabled = true;
 
   const shiftHours = parseFloat(document.getElementById("input-shift-hours").value) || 8.0;
   const serviceTime = parseFloat(document.getElementById("input-service-time").value) || 12.0;
 
-  // Actualizar tiempos de servicio en las órdenes
   state.orders.forEach(o => o.service_time_min = serviceTime);
 
   const payload = {
@@ -214,16 +228,16 @@ async function runSimulation() {
 
     if (!res.ok) {
       const err = await res.json();
-      alert(`Error en simulación: ${err.detail || "Error desconocido"}`);
+      alert(`Error en la optimización: ${err.detail || "Error no especificado"}`);
       return;
     }
 
     const data = await res.json();
     renderSimulationResults(data);
   } catch (e) {
-    alert("Error al comunicarse con el servidor de optimización.");
+    alert("Fallo de comunicación con el motor de optimización.");
   } finally {
-    btn.innerText = "🚀 Iniciar Simulación y Comparación";
+    btn.innerText = originalText;
     btn.disabled = false;
   }
 }
@@ -234,49 +248,44 @@ function renderSimulationResults(data) {
 
   const results = data.results;
 
-  // Renderizar tarjetas de métricas
-  renderAlgoCard("ga", results.GA, data.best_algorithm_by_distance === "GA");
-  renderAlgoCard("pso", results.PSO, data.best_algorithm_by_distance === "PSO");
-  renderAlgoCard("aco", results.ACO, data.best_algorithm_by_distance === "ACO");
+  renderAlgoCard("card-ga", results.GA, data.best_algorithm_by_distance === "GA");
+  renderAlgoCard("card-pso", results.PSO, data.best_algorithm_by_distance === "PSO");
+  renderAlgoCard("card-aco", results.ACO, data.best_algorithm_by_distance === "ACO");
 
-  // Trazar rutas en el mapa
   clearRoutes();
-  drawRoute(routeLayerGA, results.GA.route_polyline, "#0ea5e9", 4);
-  drawRoute(routeLayerPSO, results.PSO.route_polyline, "#10b981", 4, "6, 6");
-  drawRoute(routeLayerACO, results.ACO.route_polyline, "#f59e0b", 3, "2, 6");
+  drawRoute(routeLayerGA, results.GA.route_polyline, "#0284c7", 3.5);
+  drawRoute(routeLayerPSO, results.PSO.route_polyline, "#059669", 3.5, "6, 6");
+  drawRoute(routeLayerACO, results.ACO.route_polyline, "#d97706", 3.5, "2, 6");
 
-  // Gráfica de convergencia con Chart.js
   renderConvergenceChart(results);
 }
 
-function renderAlgoCard(id, res, isWinner) {
-  const card = document.getElementById(`card-${id}`);
-  card.innerHTML = `
-    <h4>
-      ${res.name}
-      ${isWinner ? '<span class="badge-winner">Mejor Distancia</span>' : ''}
-    </h4>
-    <div class="metric-row">
-      <span>Órdenes entregadas:</span>
-      <span class="metric-val" style="color: ${res.orders_dropped > 0 ? '#fbbf24' : '#34d399'}">
-        ${res.orders_delivered} / ${res.orders_delivered + res.orders_dropped}
-      </span>
+function renderAlgoCard(containerId, res, isOptimal) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = `
+    <div class="card-title-row">
+      <span class="card-title">${res.name}</span>
+      ${isOptimal ? '<span class="badge-optimal">Menor Distancia</span>' : ''}
     </div>
-    <div class="metric-row">
-      <span>Distancia total:</span>
-      <span class="metric-val">${res.total_distance_km} km</span>
+    <div class="metric-line">
+      <span>Órdenes completadas:</span>
+      <span class="metric-data">${res.orders_delivered} de ${res.orders_delivered + res.orders_dropped}</span>
     </div>
-    <div class="metric-row">
-      <span>Tiempo total (jornada):</span>
-      <span class="metric-val">${res.total_time_hours} hrs</span>
+    <div class="metric-line">
+      <span>Distancia de ruta:</span>
+      <span class="metric-data">${res.total_distance_km} km</span>
     </div>
-    <div class="metric-row">
-      <span>Conducción / Servicio:</span>
-      <span class="metric-val">${res.driving_time_hours}h / ${res.service_time_hours}h</span>
+    <div class="metric-line">
+      <span>Duración estimada:</span>
+      <span class="metric-data">${res.total_time_hours} hrs</span>
     </div>
-    <div class="metric-row">
+    <div class="metric-line">
+      <span>Manejo / Atención:</span>
+      <span class="metric-data">${res.driving_time_hours}h / ${res.service_time_hours}h</span>
+    </div>
+    <div class="metric-line">
       <span>Tiempo de cómputo:</span>
-      <span class="metric-val">${res.execution_time_sec}s</span>
+      <span class="metric-data">${res.execution_time_sec} s</span>
     </div>
   `;
 }
@@ -301,26 +310,26 @@ function renderConvergenceChart(results) {
       labels: labels,
       datasets: [
         {
-          label: "GA (Genético)",
+          label: "GA",
           data: gaData,
-          borderColor: "#0ea5e9",
-          backgroundColor: "rgba(14, 165, 233, 0.1)",
+          borderColor: "#0284c7",
+          backgroundColor: "transparent",
           borderWidth: 2,
           pointRadius: 0
         },
         {
-          label: "PSO (Enjambre)",
+          label: "PSO",
           data: psoData,
-          borderColor: "#10b981",
-          backgroundColor: "rgba(16, 185, 129, 0.1)",
+          borderColor: "#059669",
+          backgroundColor: "transparent",
           borderWidth: 2,
           pointRadius: 0
         },
         {
-          label: "ACO (Hormigas)",
+          label: "ACO",
           data: acoData,
-          borderColor: "#f59e0b",
-          backgroundColor: "rgba(245, 158, 11, 0.1)",
+          borderColor: "#d97706",
+          backgroundColor: "transparent",
           borderWidth: 2,
           pointRadius: 0
         }
@@ -329,27 +338,29 @@ function renderConvergenceChart(results) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      animation: false,
       plugins: {
         legend: {
+          position: "top",
           labels: { color: "#cbd5e1", font: { size: 10 } }
         },
         title: {
           display: true,
-          text: "Convergencia de Coste por Generación / Iteración",
-          color: "#94a3b8",
-          font: { size: 11 }
+          text: "Convergencia de Función Objetivo (Distancia y Penalización)",
+          color: "#9ca3af",
+          font: { size: 11, weight: "bold" }
         }
       },
       scales: {
         x: {
-          title: { display: true, text: "Iteraciones", color: "#64748b", font: { size: 9 } },
+          title: { display: true, text: "Iteración", color: "#64748b", font: { size: 9 } },
           ticks: { color: "#64748b" },
-          grid: { color: "#334155" }
+          grid: { color: "#252f44" }
         },
         y: {
-          title: { display: true, text: "Coste (Distancia + Penalización)", color: "#64748b", font: { size: 9 } },
+          title: { display: true, text: "Valor de Coste", color: "#64748b", font: { size: 9 } },
           ticks: { color: "#64748b" },
-          grid: { color: "#334155" }
+          grid: { color: "#252f44" }
         }
       }
     }

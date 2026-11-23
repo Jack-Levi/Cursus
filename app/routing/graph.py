@@ -5,29 +5,23 @@ from app.routing.overpass import haversine_distance_m, fetch_street_network
 from app.config import HIGHWAY_SPEEDS, DEFAULT_SPEED_KMH
 
 class RoadNetwork:
-    """Administra el grafo vial de OpenStreetMap y el cálculo de distancias/tiempos con Dijkstra."""
+    """Administra el grafo vial de OpenStreetMap y el cálculo de distancias y tiempos con Dijkstra."""
 
     def __init__(self):
         self.graph = nx.DiGraph()
         self.node_coords: Dict[int, Tuple[float, float]] = {}
 
     def build_from_overpass(self, overpass_data: Dict[str, Any]):
-        """Construye un grafo dirigido a partir de los elementos devueltos por Overpass API."""
         self.graph.clear()
         self.node_coords.clear()
 
         elements = overpass_data.get("elements", [])
         ways = []
 
-        # Paso 1: Indexar nodos geográficos
         for el in elements:
             if el["type"] == "node":
-                nid = el["id"]
-                self.node_coords[nid] = (el["lat"], el["lon"])
-
-        # Paso 2: Procesar vías y sentidos de circulación
-        for el in elements:
-            if el["type"] == "way":
+                self.node_coords[el["id"]] = (el["lat"], el["lon"])
+            elif el["type"] == "way":
                 ways.append(el)
 
         for way in ways:
@@ -36,7 +30,6 @@ class RoadNetwork:
             highway_type = tags.get("highway", "residential")
             speed = HIGHWAY_SPEEDS.get(highway_type, DEFAULT_SPEED_KMH)
 
-            # Verificar si tiene velocidad máxima explícita en OSM
             if "maxspeed" in tags:
                 try:
                     speed = float(tags["maxspeed"].split()[0])
@@ -65,7 +58,6 @@ class RoadNetwork:
                     self.graph.add_edge(v, u, length_m=dist_m, speed_kmh=speed, travel_time_sec=travel_time_sec)
 
     def find_nearest_node(self, target_lat: float, target_lon: float) -> Optional[int]:
-        """Encuentra el nodo del grafo más cercano a una coordenada dada."""
         if not self.node_coords:
             return None
 
@@ -82,10 +74,6 @@ class RoadNetwork:
 
     def get_shortest_path(self, origin_lat: float, origin_lon: float,
                           dest_lat: float, dest_lon: float) -> Tuple[float, float, List[List[float]]]:
-        """
-        Retorna (distancia_km, tiempo_min, polilínea_coords) usando Dijkstra sobre el grafo.
-        Si no hay camino o el grafo está vacío, usa estimación vial urbana de respaldo.
-        """
         u = self.find_nearest_node(origin_lat, origin_lon)
         v = self.find_nearest_node(dest_lat, dest_lon)
 
@@ -104,13 +92,11 @@ class RoadNetwork:
             except nx.NetworkXNoPath:
                 pass
 
-        # Respaldo: Estimación urbana realista (factor de retícula 1.3x de distancia y velocidad 32 km/h)
+        # Factor de desvío urbano de 1.30 sobre distancia ortodrómica a 32 km/h
         direct_m = haversine_distance_m(origin_lat, origin_lon, dest_lat, dest_lon)
-        urban_m = direct_m * 1.30
-        dist_km = urban_m / 1000.0
+        dist_km = (direct_m * 1.30) / 1000.0
         time_min = (dist_km / 32.0) * 60.0
 
-        # Polilínea simplificada con punto medio
         mid_lat = (origin_lat + dest_lat) / 2.0
         mid_lon = (origin_lon + dest_lon) / 2.0
         polyline = [[origin_lat, origin_lon], [mid_lat, mid_lon], [dest_lat, dest_lon]]
@@ -119,11 +105,6 @@ class RoadNetwork:
 def build_cost_matrices(hub_coord: Tuple[float, float],
                         order_coords: List[Tuple[float, float]],
                         road_network: RoadNetwork) -> Tuple[List[List[float]], List[List[float]], Dict[Tuple[int, int], List[List[float]]]]:
-    """
-    Construye las matrices de distancia (km) y tiempo (min) entre todos los puntos.
-    El índice 0 representa el Centro de Distribución (Hub).
-    Los índices 1..N representan las órdenes.
-    """
     points = [hub_coord] + order_coords
     n = len(points)
     dist_matrix = [[0.0] * n for _ in range(n)]
