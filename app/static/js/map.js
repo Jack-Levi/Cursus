@@ -5,44 +5,34 @@ let routeLayerGA;
 let routeLayerPSO;
 let routeLayerACO;
 
-// Marcador SVG para la Estación de Distribución (Amazon Amber #FF9900)
+// Marcador SVG para la Estación de Distribución (Terracota / Rojo Industrial #C2410C)
 const hubSvgIcon = L.divIcon({
   className: "leaflet-hub-marker",
   html: `
-    <svg width="34" height="42" viewBox="0 0 34 42" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <filter id="hub-shadow" x="0" y="0" width="34" height="42" filterUnits="userSpaceOnUse">
-        <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000000" flood-opacity="0.7"/>
-      </filter>
-      <g filter="url(#hub-shadow)">
-        <path d="M17 2C9.27 2 3 8.27 3 16C3 25.5 17 38 17 38C17 38 31 25.5 31 16C31 8.27 24.73 2 17 2Z" fill="#131921" stroke="#FF9900" stroke-width="2.5"/>
-        <rect x="11.5" y="10.5" width="11" height="11" rx="2" fill="#FF9900"/>
-        <path d="M11.5 14H22.5M17 10.5V21.5" stroke="#131921" stroke-width="1.2"/>
-      </g>
+    <svg width="32" height="38" viewBox="0 0 32 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M16 2C8.82 2 3 7.82 3 15C3 24 16 36 16 36C16 36 29 24 29 15C29 7.82 23.18 2 16 2Z" fill="#C2410C" stroke="#7C2D12" stroke-width="1.5"/>
+      <rect x="10.5" y="10" width="11" height="10" rx="1.5" fill="#FFFFFF"/>
+      <path d="M10.5 13H21.5M16 10V20" stroke="#C2410C" stroke-width="1.2"/>
     </svg>
   `,
-  iconSize: [34, 42],
-  iconAnchor: [17, 38],
-  popupAnchor: [0, -36]
+  iconSize: [32, 38],
+  iconAnchor: [16, 36],
+  popupAnchor: [0, -34]
 });
 
-// Marcador SVG numerado para paquetes de entrega (Amazon dark slate con borde ámbar y tipografía monoespaciada)
+// Marcador SVG numerado para paquetes de entrega (Gris grafito sobrio con borde blanco)
 function createOrderSvgIcon(index) {
   const label = index < 10 ? `0${index}` : `${index}`;
   return L.divIcon({
     className: "leaflet-order-marker",
     html: `
-      <svg width="28" height="34" viewBox="0 0 28 34" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <filter id="pin-shadow-${index}" x="0" y="0" width="28" height="34" filterUnits="userSpaceOnUse">
-          <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#000000" flood-opacity="0.6"/>
-        </filter>
-        <g filter="url(#pin-shadow-${index})">
-          <path d="M14 1C7.37 1 2 6.37 2 13C2 20.8 14 31 14 31C14 31 26 20.8 26 13C26 6.37 20.63 1 14 1Z" fill="#1C2430" stroke="#FF9900" stroke-width="1.6"/>
-          <text x="14" y="16" fill="#FFFFFF" font-size="9.5" font-weight="700" text-anchor="middle" font-family="'JetBrains Mono', monospace">${label}</text>
-        </g>
+      <svg width="26" height="32" viewBox="0 0 26 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M13 1C6.92 1 2 5.92 2 12C2 19.5 13 30 13 30C13 30 24 19.5 24 12C24 5.92 19.08 1 13 1Z" fill="#1D222C" stroke="#4B5563" stroke-width="1.4"/>
+        <text x="13" y="15" fill="#F3F4F6" font-size="9" font-weight="600" text-anchor="middle" font-family="'JetBrains Mono', monospace">${label}</text>
       </svg>
     `,
-    iconSize: [28, 34],
-    iconAnchor: [14, 31],
+    iconSize: [26, 32],
+    iconAnchor: [13, 30],
     popupAnchor: [0, -28]
   });
 }
@@ -69,7 +59,7 @@ function initMap(initialLat, initialLon) {
     draggable: true
   }).addTo(map);
 
-  hubMarker.bindPopup("<strong>Estación de Entrega (Hub DS-MTY1)</strong><br>Arrastre este marcador para reubicar la nave industrial de salida y retorno.");
+  hubMarker.bindPopup("<strong>Estación de Distribución (Hub)</strong><br>Arrastre este marcador para reubicar la base en cualquier punto de la red vial.");
 
   hubMarker.on("dragend", function (e) {
     const pos = e.target.getLatLng();
@@ -91,7 +81,7 @@ function renderOrdersOnMap(orders) {
     const marker = L.marker([order.lat, order.lon], {
       icon: createOrderSvgIcon(idx + 1)
     });
-    marker.bindPopup(`<strong>Parada ${idx + 1} // ${order.id || "TBA"}</strong><br>${order.address || "Dirección registrada"}<br><span class="font-mono">Tiempo en puerta: ${order.service_time_min} min</span>`);
+    marker.bindPopup(`<strong>Parada ${idx + 1} (${order.id || "Guía"})</strong><br>${order.address || "Dirección registrada"}<br><span class="font-mono">Tiempo en puerta: ${order.service_time_min} min</span>`);
     ordersLayer.addLayer(marker);
   });
 
@@ -101,14 +91,14 @@ function renderOrdersOnMap(orders) {
   }
 }
 
-function drawRoute(layer, coordinates, color, weight = 3.2, dashArray = null) {
+function drawRoute(layer, coordinates, color, weight = 2.8, dashArray = null) {
   layer.clearLayers();
   if (!coordinates || coordinates.length < 2) return;
 
   const polyline = L.polyline(coordinates, {
     color: color,
     weight: weight,
-    opacity: 0.95,
+    opacity: 0.9,
     dashArray: dashArray,
     smoothFactor: 1.0
   });

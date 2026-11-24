@@ -1,5 +1,5 @@
 const state = {
-  hub: { name: "Estación de Entrega DS-MTY1 (Monterrey Norte)", lat: 25.7250, lon: -100.3130 },
+  hub: { name: "Estación de Entrega Norte (Monterrey)", lat: 25.7250, lon: -100.3130 },
   orders: [],
   shift: { max_hours: 8.0, service_time_per_order_min: 12.0, buffer_time_min: 15.0 },
   results: null,
@@ -81,7 +81,7 @@ function switchTab(tabName) {
 function updateHeaderAndHubUI() {
   document.getElementById("hub-coords").innerText = `${state.hub.lat.toFixed(4)}, ${state.hub.lon.toFixed(4)}`;
   document.getElementById("hub-name").innerText = state.hub.name;
-  document.getElementById("header-hub-name").innerText = state.hub.name.split(",")[0].replace("Estación de Entrega ", "");
+  document.getElementById("header-hub-name").innerText = state.hub.name.split(",")[0].replace("Estación de Entrega ", "").replace("Centro de Distribución ", "");
   document.getElementById("header-shift-label").innerText = `${state.shift.max_hours.toFixed(1)} hrs`;
 }
 
@@ -93,10 +93,10 @@ window.onHubMoved = async (lat, lon) => {
     const res = await fetch(`/api/reverse-geocode?lat=${lat}&lon=${lon}`);
     if (res.ok) {
       const data = await res.json();
-      state.hub.name = `Estación DS (${data.display_name.split(",").slice(0, 2).join(",")})`;
+      state.hub.name = `Estación (${data.display_name.split(",").slice(0, 2).join(",")})`;
     }
   } catch (e) {
-    state.hub.name = `Estación DS (${lat.toFixed(4)}, ${lon.toFixed(4)})`;
+    state.hub.name = `Estación (${lat.toFixed(4)}, ${lon.toFixed(4)})`;
   }
 
   updateHeaderAndHubUI();
@@ -155,7 +155,7 @@ async function handleAddAddress() {
 function addOrder(lat, lon, address = "") {
   const serviceTime = parseFloat(document.getElementById("input-service-time").value) || 12.0;
   const trackingNumber = `TBA-${Math.floor(100000 + Math.random() * 900000)}`;
-  const packageTypes = ["Caja Estándar", "Sobre Acolchado", "Paquete Prime", "Caja Mediana"];
+  const packageTypes = ["Caja estándar", "Sobre acolchado", "Paquete prioritario", "Caja mediana"];
   const packageType = packageTypes[Math.floor(Math.random() * packageTypes.length)];
 
   const newOrder = {
@@ -198,16 +198,16 @@ function generateSampleOrders() {
   const serviceTime = parseFloat(document.getElementById("input-service-time").value) || 12.0;
 
   const SAMPLE_PACKAGES = [
-    { address: "Av. Universidad 402, San Nicolás", latOffset: 0.015, lonOffset: 0.008, type: "Caja Estándar" },
-    { address: "Av. Manuel L. Barragán 1250, San Nicolás", latOffset: 0.022, lonOffset: -0.012, type: "Sobre Acolchado" },
-    { address: "Av. Fidel Velázquez 310, Monterrey Norte", latOffset: -0.018, lonOffset: -0.015, type: "Paquete Prime" },
-    { address: "Av. Rómulo Garza 240, San Nicolás", latOffset: 0.008, lonOffset: 0.028, type: "Caja Mediana" },
-    { address: "Av. Almazán 810, San Nicolás", latOffset: -0.012, lonOffset: -0.025, type: "Sobre Acolchado" },
-    { address: "Av. Sendero Divisorio 200, General Escobedo", latOffset: 0.038, lonOffset: -0.005, type: "Caja Estándar" },
-    { address: "Av. Raúl Salinas Lozano 540, General Escobedo", latOffset: 0.032, lonOffset: -0.032, type: "Paquete Prime" },
-    { address: "Av. Nogalar Sur 1100, San Nicolás", latOffset: -0.005, lonOffset: 0.016, type: "Caja Voluminosa" },
-    { address: "Av. Benito Juárez 320, San Nicolás Centro", latOffset: 0.018, lonOffset: 0.022, type: "Caja Estándar" },
-    { address: "Av. Churubusco 900, Monterrey", latOffset: -0.028, lonOffset: 0.012, type: "Sobre Acolchado" }
+    { address: "Av. Universidad 402, San Nicolás", latOffset: 0.015, lonOffset: 0.008, type: "Caja estándar" },
+    { address: "Av. Manuel L. Barragán 1250, San Nicolás", latOffset: 0.022, lonOffset: -0.012, type: "Sobre acolchado" },
+    { address: "Av. Fidel Velázquez 310, Monterrey Norte", latOffset: -0.018, lonOffset: -0.015, type: "Paquete prioritario" },
+    { address: "Av. Rómulo Garza 240, San Nicolás", latOffset: 0.008, lonOffset: 0.028, type: "Caja mediana" },
+    { address: "Av. Almazán 810, San Nicolás", latOffset: -0.012, lonOffset: -0.025, type: "Sobre acolchado" },
+    { address: "Av. Sendero Divisorio 200, General Escobedo", latOffset: 0.038, lonOffset: -0.005, type: "Caja estándar" },
+    { address: "Av. Raúl Salinas Lozano 540, General Escobedo", latOffset: 0.032, lonOffset: -0.032, type: "Paquete prioritario" },
+    { address: "Av. Nogalar Sur 1100, San Nicolás", latOffset: -0.005, lonOffset: 0.016, type: "Caja voluminosa" },
+    { address: "Av. Benito Juárez 320, San Nicolás Centro", latOffset: 0.018, lonOffset: 0.022, type: "Caja estándar" },
+    { address: "Av. Churubusco 900, Monterrey", latOffset: -0.028, lonOffset: 0.012, type: "Sobre acolchado" }
   ];
 
   SAMPLE_PACKAGES.forEach((p, idx) => {
@@ -250,7 +250,7 @@ function updateOrdersUI() {
     const li = document.createElement("li");
     li.className = "order-card-row";
     const label = (idx + 1) < 10 ? `0${idx + 1}` : `${idx + 1}`;
-    const pkgType = o.package_type || "Caja Estándar";
+    const pkgType = o.package_type || "Caja estándar";
 
     li.innerHTML = `
       <div class="order-badge-num font-mono">${label}</div>
@@ -273,11 +273,11 @@ async function runSimulation() {
 
   const btn = document.getElementById("btn-run-simulation");
   const originalText = btn.innerText;
-  btn.innerText = "Descargando red vial y optimizando despacho...";
+  btn.innerText = "Descargando red vial y optimizando...";
   btn.disabled = true;
 
   const statusDock = document.getElementById("dock-status-message");
-  statusDock.innerText = "Optimizando ruteo de última milla con GA, PSO y ACO...";
+  statusDock.innerText = "Calculando ruta óptima con GA, PSO y ACO...";
 
   const shiftHours = parseFloat(document.getElementById("input-shift-hours").value) || 8.0;
   const serviceTime = parseFloat(document.getElementById("input-service-time").value) || 12.0;
@@ -331,7 +331,7 @@ function renderSimulationResults(data) {
   document.getElementById("stat-best-distance").innerText = `${bestAlgo} (${bestRes.total_distance_km} km)`;
   document.getElementById("stat-fulfillment").innerText = `${bestRes.orders_delivered} de ${bestRes.orders_delivered + bestRes.orders_dropped} entregados`;
 
-  document.getElementById("dock-status-message").innerText = `Ruta óptima: ${bestAlgo} con ${bestRes.total_distance_km} km en ${bestRes.total_time_hours} hrs`;
+  document.getElementById("dock-status-message").innerText = `Ruta óptima: ${bestAlgo} (${bestRes.total_distance_km} km en ${bestRes.total_time_hours} hrs)`;
 
   renderSideMetricCard("side-card-ga", results.GA, bestAlgo === "GA");
   renderSideMetricCard("side-card-pso", results.PSO, bestAlgo === "PSO");
@@ -342,9 +342,9 @@ function renderSimulationResults(data) {
   document.getElementById("pill-km-aco").innerText = `${results.ACO.total_distance_km} km`;
 
   clearRoutes();
-  drawRoute(routeLayerGA, results.GA.route_polyline, "#00A8E1", 3.2);
-  drawRoute(routeLayerPSO, results.PSO.route_polyline, "#10B981", 3.2, "6, 6");
-  drawRoute(routeLayerACO, results.ACO.route_polyline, "#FF9900", 3.2, "2, 6");
+  drawRoute(routeLayerGA, results.GA.route_polyline, "#38BDF8", 2.8);
+  drawRoute(routeLayerPSO, results.PSO.route_polyline, "#34D399", 2.8, "5, 5");
+  drawRoute(routeLayerACO, results.ACO.route_polyline, "#F59E0B", 2.8, "2, 5");
 
   renderConvergenceChart(results);
   renderScheduleTimeline(bestRes);
@@ -361,19 +361,19 @@ function renderSideMetricCard(containerId, res, isOptimal) {
     </div>
     <div class="metric-grid-2x2 font-mono">
       <div class="m-item">
-        <span class="m-label">Distancia Total</span>
+        <span class="m-label">Distancia</span>
         <span class="m-data">${res.total_distance_km} km</span>
       </div>
       <div class="m-item">
-        <span class="m-label">Tiempo de Ruta</span>
+        <span class="m-label">Tiempo Total</span>
         <span class="m-data">${res.total_time_hours} hrs</span>
       </div>
       <div class="m-item">
-        <span class="m-label">Paquetes SLA</span>
+        <span class="m-label">Cumplimiento</span>
         <span class="m-data">${res.orders_delivered} / ${res.orders_delivered + res.orders_dropped}</span>
       </div>
       <div class="m-item">
-        <span class="m-label">Cálculo</span>
+        <span class="m-label">Cómputo</span>
         <span class="m-data">${res.execution_time_sec} s</span>
       </div>
     </div>
@@ -400,27 +400,27 @@ function renderConvergenceChart(results) {
       labels: labels,
       datasets: [
         {
-          label: "GA (Prime)",
+          label: "Genético (GA)",
           data: gaData,
-          borderColor: "#00A8E1",
+          borderColor: "#38BDF8",
           backgroundColor: "transparent",
-          borderWidth: 1.8,
+          borderWidth: 1.5,
           pointRadius: 0
         },
         {
-          label: "PSO (On-Time)",
+          label: "Enjambre (PSO)",
           data: psoData,
-          borderColor: "#10B981",
+          borderColor: "#34D399",
           backgroundColor: "transparent",
-          borderWidth: 1.8,
+          borderWidth: 1.5,
           pointRadius: 0
         },
         {
-          label: "ACO (Fleet)",
+          label: "Hormigas (ACO)",
           data: acoData,
-          borderColor: "#FF9900",
+          borderColor: "#F59E0B",
           backgroundColor: "transparent",
-          borderWidth: 1.8,
+          borderWidth: 1.5,
           pointRadius: 0
         }
       ]
@@ -433,7 +433,7 @@ function renderConvergenceChart(results) {
         legend: {
           position: "top",
           labels: {
-            color: "#94A3B8",
+            color: "#9CA3AF",
             font: { family: "'JetBrains Mono', monospace", size: 9 },
             boxWidth: 10
           }
@@ -442,12 +442,12 @@ function renderConvergenceChart(results) {
       scales: {
         x: {
           title: { display: false },
-          ticks: { color: "#64748B", font: { family: "'JetBrains Mono', monospace", size: 8 } },
+          ticks: { color: "#6B7280", font: { family: "'JetBrains Mono', monospace", size: 8 } },
           grid: { color: "rgba(255, 255, 255, 0.05)" }
         },
         y: {
           title: { display: false },
-          ticks: { color: "#64748B", font: { family: "'JetBrains Mono', monospace", size: 8 } },
+          ticks: { color: "#6B7280", font: { family: "'JetBrains Mono', monospace", size: 8 } },
           grid: { color: "rgba(255, 255, 255, 0.05)" }
         }
       }
@@ -463,7 +463,7 @@ function renderScheduleTimeline(bestRes) {
   startItem.className = "timeline-item";
   startItem.innerHTML = `
     <span class="timeline-time">00:00</span>
-    <span class="timeline-desc">Salida de Estación DS-MTY1 (Carga completada)</span>
+    <span class="timeline-desc">Salida de Estación (${state.hub.name.split(",")[0]})</span>
     <span class="timeline-dist">0.0 km</span>
   `;
   container.appendChild(startItem);
@@ -479,7 +479,7 @@ function renderScheduleTimeline(bestRes) {
 
     item.innerHTML = `
       <span class="timeline-time">${timeFormatted}</span>
-      <span class="timeline-desc">#${num} ${tracking} · ${stop.address}</span>
+      <span class="timeline-desc">#${num} ${tracking}: ${stop.address}</span>
       <span class="timeline-dist">+${stop.distance_from_prev_km} km</span>
     `;
     container.appendChild(item);
@@ -492,28 +492,28 @@ function renderScheduleTimeline(bestRes) {
   const endM = Math.floor(totalMin % 60);
   endItem.innerHTML = `
     <span class="timeline-time">${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}</span>
-    <span class="timeline-desc">Retorno a Estación DS-MTY1 (Fin de jornada laboral)</span>
+    <span class="timeline-desc">Retorno a Estación (${state.hub.name.split(",")[0]})</span>
     <span class="timeline-dist">${bestRes.total_distance_km} km</span>
   `;
   container.appendChild(endItem);
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   MÓDULO TUTORIAL // Amazon Logistics Onboarding
+   MÓDULO DE GUÍA DE USO (Sólo se abre por acción del usuario)
    ═══════════════════════════════════════════════════════════════ */
 
 const TOUR_STEPS = [
   {
     step: 1,
     title: "Paso 1: Estación de Entrega (Hub) y Reubicación",
-    desc: "El marcador ámbar en el mapa señala tu base de operaciones y almacén de paquetería. <strong>Puedes hacer clic y arrastrar el símbolo del almacén a cualquier dirección o colonia de la ciudad</strong>; al soltarlo, Cursus geocodifica la nueva nave industrial y recalcula la matriz de distancias viales.",
+    desc: "El marcador rojo en el mapa señala tu base de operaciones y almacén. <strong>Puedes hacer clic y arrastrar el símbolo de la estación a cualquier dirección o colonia de la ciudad</strong>; al soltarlo, se recalculan automáticamente las distancias viales.",
     tab: "params",
     highlightHub: true
   },
   {
     step: 2,
     title: "Paso 2: Manifiesto de Paquetes y Guías de Envío",
-    desc: "Ingresa los domicilios de entrega de tus clientes. Puedes registrar guías escribiendo una dirección en la barra de búsqueda, haciendo clic directamente en cualquier calle del mapa o cargando el lote de prueba con 10 paquetes y códigos de rastreo TBA.",
+    desc: "Ingresa los domicilios de entrega de tus clientes. Puedes registrar guías escribiendo una dirección en la barra de búsqueda, haciendo clic directamente en cualquier calle del mapa o cargando el lote de prueba con 10 paquetes en Monterrey.",
     tab: "orders",
     highlightHub: false
   },
@@ -527,13 +527,13 @@ const TOUR_STEPS = [
   {
     step: 4,
     title: "Paso 4: Algoritmos de Ruteo de Flotas (GA · PSO · ACO)",
-    desc: "Al presionar <strong>'Asignar y Optimizar Ruta de Despacho'</strong>, Cursus descarga la red vial real con límites de velocidad vía Overpass API, resolviendo caminos mínimos con Dijkstra y optimizando la secuencia mediante Algoritmos Genéticos, Enjambre y Hormigas en paralelo.",
+    desc: "Al presionar <strong>'Optimizar Ruta y Asignar Turno'</strong>, Cursus descarga la red vial real con límites de velocidad vía Overpass API, resolviendo caminos mínimos con Dijkstra y optimizando la secuencia mediante Algoritmos Genéticos, Enjambre y Hormigas en paralelo.",
     tab: "orders",
     highlightHub: false
   },
   {
     step: 5,
-    title: "Paso 5: Hoja de Ruta del Conductor y Desglose SLA",
+    title: "Paso 5: Hoja de Ruta del Conductor y Métricas",
     desc: "La pestaña de <strong>Métricas de Entrega</strong> presenta el algoritmo con menor kilometraje y consumo, la curva de convergencia y la hoja de ruta cronológica paso a paso con horario exacto de llegada a cada cliente y retorno a la estación.",
     tab: "results",
     highlightHub: false
@@ -568,11 +568,7 @@ function initTutorial() {
     }
   });
 
-  if (!localStorage.getItem("cursus_tutorial_seen")) {
-    setTimeout(() => {
-      openTutorial(false);
-    }, 400);
-  }
+  // NO abrir automáticamente al cargar la página: queda 100% bajo control del usuario
 }
 
 function openTutorial(forceWelcome = true) {
@@ -595,7 +591,6 @@ function openTutorial(forceWelcome = true) {
 function closeTutorial() {
   const overlay = document.getElementById("tutorial-overlay");
   if (overlay) overlay.style.display = "none";
-  localStorage.setItem("cursus_tutorial_seen", "true");
   if (typeof highlightHubMarker === "function") {
     highlightHubMarker(false);
   }
@@ -607,7 +602,7 @@ function setTourStep(index) {
   document.getElementById("tutorial-card-step").style.display = "block";
 
   const stepData = TOUR_STEPS[index];
-  document.getElementById("tut-step-badge").innerText = `PASO ${stepData.step} DE ${TOUR_STEPS.length}`;
+  document.getElementById("tut-step-badge").innerText = `Paso ${stepData.step} de ${TOUR_STEPS.length}`;
   document.getElementById("tut-step-title").innerText = stepData.title;
   document.getElementById("tut-step-desc").innerHTML = stepData.desc;
 
@@ -619,23 +614,25 @@ function setTourStep(index) {
     highlightHubMarker(stepData.highlightHub);
   }
 
-  const indicators = document.querySelectorAll("#tut-progress-indicators .indicator-dot");
-  indicators.forEach((dot, idx) => {
-    dot.classList.toggle("active", idx === index);
+  // Actualizar barras de paso
+  const bars = document.querySelectorAll("#tut-steps-bar .step-indicator-bar");
+  bars.forEach((bar, idx) => {
+    bar.classList.toggle("active", idx <= index);
   });
 
+  // Actualizar textos de botones de navegación
   const nextBtn = document.getElementById("btn-tour-next");
   if (index === TOUR_STEPS.length - 1) {
-    nextBtn.innerText = "¡Finalizar y Despachar!";
+    nextBtn.innerText = "Finalizar";
   } else {
-    nextBtn.innerText = "Siguiente →";
+    nextBtn.innerText = "Siguiente";
   }
 
   const prevBtn = document.getElementById("btn-tour-prev");
   if (index === 0) {
-    prevBtn.innerText = "← Inicio";
+    prevBtn.innerText = "Inicio";
   } else {
-    prevBtn.innerText = "← Anterior";
+    prevBtn.innerText = "Anterior";
   }
 }
 

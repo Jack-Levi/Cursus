@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CURSUS LOGISTICS : Centro de Distribución y Ruteo de Paquetería</title>
+  <title>Cursus Logistics : Consola de Despacho y Ruteo de Paquetería</title>
 
   <!-- Tipografía Inter y JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
   <!-- Leaflet 1.9.4 Local -->
   <link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css" />
 
-  <!-- Estilos del Sistema de Diseño Amazon Logistics -->
+  <!-- Estilos del Sistema de Diseño -->
   <link rel="stylesheet" href="/static/css/style.css">
 
   <!-- Chart.js Local -->
@@ -21,7 +21,7 @@
 </head>
 <body>
 
-  <!-- Cabecera de Operaciones Amazon Logistics (48px) -->
+  <!-- Cabecera de Operaciones (48px) -->
   <header class="app-header">
     <div class="brand">
       <div class="brand-mark" aria-hidden="true">
@@ -32,25 +32,27 @@
         </svg>
       </div>
       <div>
-        <h1 class="brand-title">CURSUS LOGISTICS</h1>
-        <p class="brand-subtitle">CENTRO DE DISTRIBUCIÓN // DESPACHO VRP</p>
+        <h1 class="brand-title">Cursus Logistics</h1>
+        <p class="brand-subtitle">Centro de Distribución y Ruteo de Paquetería</p>
       </div>
     </div>
 
-    <!-- Indicadores de Operación en Vivo -->
+    <!-- Indicadores de Operación (Sin pastillas decorativas) -->
     <div class="header-center">
-      <div class="header-pills">
-        <div class="header-pill">
-          <span class="pill-label">Estación</span>
-          <span id="header-hub-name" class="pill-value">DS-MTY1 Norte</span>
+      <div class="header-stats">
+        <div class="stat-unit">
+          <span class="stat-k">Estación:</span>
+          <span id="header-hub-name" class="stat-v">Monterrey Norte</span>
         </div>
-        <div class="header-pill">
-          <span class="pill-label">Turno DSP</span>
-          <span id="header-shift-label" class="pill-value font-mono">8.0 hrs</span>
+        <span class="stat-sep" aria-hidden="true">/</span>
+        <div class="stat-unit">
+          <span class="stat-k">Jornada:</span>
+          <span id="header-shift-label" class="stat-v font-mono">8.0 hrs</span>
         </div>
-        <div class="header-pill">
-          <span class="pill-label">Manifiesto</span>
-          <span id="header-orders-count" class="pill-value font-mono">0 paquetes</span>
+        <span class="stat-sep" aria-hidden="true">/</span>
+        <div class="stat-unit">
+          <span class="stat-k">Manifiesto:</span>
+          <span id="header-orders-count" class="stat-v font-mono">0 paquetes</span>
         </div>
       </div>
     </div>
@@ -58,25 +60,20 @@
     <!-- Metadatos de Plataforma -->
     <div class="header-metadata">
       <span class="meta-item">
-        <span class="meta-label">Red Vial</span>
+        <span class="meta-label">Red:</span>
         <span class="meta-value">OpenStreetMap</span>
       </span>
       <span class="meta-separator">/</span>
       <span class="meta-item">
-        <span class="meta-label">Modelos</span>
+        <span class="meta-label">Modelos:</span>
         <span class="meta-value">GA · PSO · ACO</span>
       </span>
     </div>
 
     <!-- Acciones de Cabecera -->
     <div class="header-actions">
-      <button type="button" id="btn-open-tutorial" class="header-pill-tutorial font-mono">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"></circle>
-          <line x1="12" y1="16" x2="12" y2="12"></line>
-          <line x1="12" y1="8" x2="12.01" y2="8"></line>
-        </svg>
-        <span>TUTORIAL LOGÍSTICO</span>
+      <button type="button" id="btn-open-tutorial" class="header-action-btn">
+        Guía de uso
       </button>
     </div>
   </header>
@@ -105,7 +102,7 @@
           <form id="form-add-order" class="address-input-group" onsubmit="event.preventDefault();">
             <label for="input-address" class="field-label">Ingresar dirección de entrega</label>
             <div class="input-with-button">
-              <input type="text" id="input-address" class="field-input" placeholder="Ej. Av. Nogalar Sur 1200, San Nicolás..." autocomplete="off">
+              <input type="text" id="input-address" class="field-input" placeholder="Ej. Av. Nogalar Sur 1200, San Nicolás" autocomplete="off">
               <button type="submit" id="btn-add-address" class="btn btn-secondary">
                 Ingresar Guía
               </button>
@@ -113,16 +110,16 @@
           </form>
 
           <div class="quick-actions-bar">
-            <button type="button" id="btn-sample-orders" class="btn btn-utility">
-              Cargar lote de prueba (10 paquetes)
+            <button type="button" id="btn-sample-orders" class="btn btn-secondary">
+              Cargar lote de prueba (10)
             </button>
-            <button type="button" id="btn-clear-orders" class="btn btn-utility btn-danger-ghost">
+            <button type="button" id="btn-clear-orders" class="btn btn-secondary btn-danger-subtle">
               Limpiar manifiesto
             </button>
           </div>
 
           <div class="map-helper-tip">
-            Haga clic sobre cualquier calle del mapa para registrar un nuevo paquete de entrega.
+            Haga clic en cualquier punto del mapa para registrar una parada de entrega.
           </div>
         </div>
 
@@ -136,7 +133,7 @@
 
         <div class="sidebar-action-footer">
           <button type="button" id="btn-run-simulation" class="btn btn-primary" disabled>
-            Asignar y Optimizar Ruta de Despacho
+            Optimizar Ruta y Asignar Turno
           </button>
         </div>
       </div>
@@ -147,7 +144,7 @@
         <div class="param-card">
           <div class="card-header">
             <h3 class="card-title">Estación de Distribución (Hub)</h3>
-            <span class="hub-tag">Centro de Salida y Retorno</span>
+            <span class="hub-tag">Base Central</span>
           </div>
           <div class="hub-info-rows">
             <div class="info-row">
@@ -156,34 +153,34 @@
             </div>
             <div class="info-row">
               <span class="info-label">Instalación</span>
-              <span id="hub-name" class="info-text">Estación de Entrega DS-MTY1</span>
+              <span id="hub-name" class="info-text">Estación Norte</span>
             </div>
           </div>
           <p class="field-hint">
-            Arrastre el marcador ámbar del centro de distribución en el mapa para simular la salida y retorno desde cualquier nave o parque industrial de la ciudad.
+            El marcador de la estación en el mapa puede arrastrarse para reubicar la nave de salida y retorno en cualquier punto de la ciudad.
           </p>
         </div>
 
         <div class="param-card">
           <div class="card-header">
-            <h3 class="card-title">Parámetros del Turno del Conductor (DSP)</h3>
+            <h3 class="card-title">Parámetros del Turno del Repartidor</h3>
           </div>
           <div class="field-stack">
             <div class="form-row">
-              <label for="input-shift-hours" class="field-label">Límite de jornada laboral del repartidor (horas)</label>
+              <label for="input-shift-hours" class="field-label">Límite de jornada laboral (horas)</label>
               <input type="number" id="input-shift-hours" class="field-input font-mono" value="8" min="1" max="16" step="0.5">
             </div>
             <div class="form-row">
-              <label for="input-service-time" class="field-label">Tiempo de parada en domicilio por paquete (minutos)</label>
+              <label for="input-service-time" class="field-label">Tiempo de parada en puerta por paquete (minutos)</label>
               <input type="number" id="input-service-time" class="field-input font-mono" value="12" min="1" max="60" step="1">
             </div>
             <div class="form-row">
-              <label for="input-buffer-time" class="field-label">Margen de seguridad para retorno al almacén (minutos)</label>
+              <label for="input-buffer-time" class="field-label">Margen de seguridad para retorno a la base (minutos)</label>
               <input type="number" id="input-buffer-time" class="field-input font-mono" value="15" min="0" max="60" step="5">
             </div>
           </div>
           <p class="field-hint">
-            El evaluador de despacho comprueba rigurosamente que el tiempo de traslado en calle más el tiempo de entrega en puerta y el viaje de retorno no excedan la jornada del repartidor.
+            El evaluador comprueba que la suma de conducción, tiempo en puerta y retorno seguro no exceda el límite de la jornada laboral.
           </p>
         </div>
 
@@ -194,17 +191,17 @@
         
         <div id="results-empty-notice" class="empty-state">
           <p>Sin despachos optimizados</p>
-          <span>Asigne el manifiesto de paquetes y ejecute la optimización para comparar el rendimiento de ruta de GA, PSO y ACO.</span>
+          <span>Asigne el manifiesto de paquetes y ejecute la optimización para comparar el rendimiento de GA, PSO y ACO.</span>
         </div>
 
         <div id="results-content" style="display: none;">
           <div class="benchmark-summary-bar">
             <div class="summary-stat">
-              <span class="stat-label">Ruta de menor coste / km</span>
+              <span class="stat-label">Ruta con menor distancia</span>
               <strong id="stat-best-distance" class="stat-value text-accent font-mono">--</strong>
             </div>
             <div class="summary-stat">
-              <span class="stat-label">Cumplimiento de SLA</span>
+              <span class="stat-label">Cumplimiento de turno</span>
               <strong id="stat-fulfillment" class="stat-value font-mono">--</strong>
             </div>
           </div>
@@ -217,7 +214,7 @@
 
           <div class="chart-box">
             <div class="chart-header">
-              <span class="chart-title">Convergencia de Función Objetivo (Distancia)</span>
+              <span class="chart-title">Convergencia de Función Objetivo</span>
             </div>
             <div class="chart-canvas-wrapper">
               <canvas id="chart-convergence" role="img" aria-label="Curvas de convergencia"></canvas>
@@ -225,7 +222,7 @@
           </div>
 
           <div class="schedule-section">
-            <h4 class="schedule-heading">Hoja de Ruta del Conductor (Itinerario de Entrega)</h4>
+            <h4 class="schedule-heading">Hoja de Ruta del Conductor</h4>
             <div id="schedule-timeline" class="timeline-container font-mono"></div>
           </div>
         </div>
@@ -241,7 +238,7 @@
       <!-- Superposición Flotante de Rutas -->
       <div class="map-floating-overlay" role="toolbar" aria-label="Control de capas de algoritmos">
         <div class="overlay-header">
-          <span class="overlay-title">Rutas de Despacho de Flota</span>
+          <span class="overlay-title">Rutas Calculadas</span>
         </div>
         <div class="overlay-toggles">
           <label class="route-toggle">
@@ -275,66 +272,57 @@
     </main>
   </div>
 
-  <!-- Tutorial Overlay (Amazon Logistics Onboarding) -->
+  <!-- Modal de Guía de Uso (Opcional, sólo se abre si el usuario hace clic) -->
   <div id="tutorial-overlay" class="tutorial-backdrop" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="tut-title">
     <div class="tutorial-backdrop-dismiss" id="tutorial-backdrop-dismiss"></div>
 
-    <!-- 1. Tarjeta de Bienvenida (Paso -1) -->
+    <!-- 1. Tarjeta de Bienvenida (Paso Inicial) -->
     <div id="tutorial-card-welcome" class="tutorial-card tutorial-card-welcome">
-      <div class="tutorial-icon-badge" aria-hidden="true">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-          <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-          <line x1="12" y1="22.08" x2="12" y2="12"></line>
-        </svg>
-      </div>
-
-      <span class="tutorial-sys-label font-mono">AMZL LOGISTICS // ONBOARDING SYS-01</span>
-      <h2 id="tut-title" class="tutorial-heading">Centro de Despacho Cursus</h2>
+      <span class="tutorial-category">Manual de Operación</span>
+      <h2 id="tut-title" class="tutorial-heading">Guía del Sistema de Despacho</h2>
       <p class="tutorial-description">
-        Plataforma técnica de optimización y ruteo para centros de distribución de paquetería de última milla. Compara Algoritmos Genéticos (GA), Optimización por Enjambre (PSO) y Colonia de Hormigas (ACO) respetando turnos laborales, tiempos de entrega en puerta y retorno seguro a la estación.
+        Esta plataforma simula el ruteo de paquetería de última milla desde un centro de distribución. Compara Algoritmos Genéticos, Optimización por Enjambre y Colonia de Hormigas evaluando tiempos de traslado vial, atención en domicilio y retorno seguro dentro de la jornada laboral.
       </p>
 
-      <div class="tutorial-actions-col">
-        <button type="button" id="btn-start-tour" class="pill-btn-amber">
-          Iniciar Tour de Operaciones (5 Pasos) &rarr;
+      <div class="tutorial-actions-row">
+        <button type="button" id="btn-start-tour" class="btn btn-primary">
+          Iniciar guía paso a paso
         </button>
-        <button type="button" id="btn-skip-tour" class="tutorial-skip-btn font-mono">
-          Saltar Tutorial e Ir al Panel de Despacho &times;
+        <button type="button" id="btn-skip-tour" class="btn btn-secondary">
+          Cerrar
         </button>
       </div>
     </div>
 
-    <!-- 2. Tarjeta de Pasos (Pasos 0 a 4) -->
+    <!-- 2. Tarjeta de Pasos -->
     <div id="tutorial-card-step" class="tutorial-card tutorial-card-step" style="display: none;">
       <div class="tutorial-step-header">
-        <span id="tut-step-badge" class="tutorial-step-pill font-mono">PASO 1 DE 5</span>
-        <button type="button" id="btn-close-tour" class="tutorial-close-btn font-mono" aria-label="Cerrar tutorial">
-          &times; Cerrar (Esc)
+        <span id="tut-step-badge" class="tutorial-step-counter font-mono">Paso 1 de 5</span>
+        <button type="button" id="btn-close-tour" class="tutorial-close-btn" aria-label="Cerrar guía">
+          Cerrar (Esc)
         </button>
+      </div>
+
+      <div id="tut-steps-bar" class="tutorial-steps-bar">
+        <div class="step-indicator-bar active"></div>
+        <div class="step-indicator-bar"></div>
+        <div class="step-indicator-bar"></div>
+        <div class="step-indicator-bar"></div>
+        <div class="step-indicator-bar"></div>
       </div>
 
       <h3 id="tut-step-title" class="tutorial-step-title">Paso 1: Estación de Entrega (Hub)</h3>
       <p id="tut-step-desc" class="tutorial-step-desc">
-        El marcador ámbar en el mapa representa tu estación de entrega y almacén. Puedes arrastrar y soltar el símbolo del almacén a cualquier dirección o colonia de la ciudad; al soltarlo, el sistema geocodifica la nueva base y recalcula las distancias viales.
+        El marcador rojo en el mapa señala tu base de operaciones y almacén. Puedes arrastrar y soltar este marcador a cualquier calle o colonia para reubicar la estación; al soltarlo, se recalculan automáticamente las distancias viales.
       </p>
-
-      <!-- Indicadores de Progreso tipo Cápsula -->
-      <div id="tut-progress-indicators" class="tutorial-indicators">
-        <span class="indicator-dot active"></span>
-        <span class="indicator-dot"></span>
-        <span class="indicator-dot"></span>
-        <span class="indicator-dot"></span>
-        <span class="indicator-dot"></span>
-      </div>
 
       <!-- Controles de Navegación -->
       <div class="tutorial-nav-footer">
-        <button type="button" id="btn-tour-prev" class="btn btn-secondary font-mono">
-          &larr; Anterior
+        <button type="button" id="btn-tour-prev" class="btn btn-secondary">
+          Anterior
         </button>
-        <button type="button" id="btn-tour-next" class="btn btn-primary-amber font-mono">
-          Siguiente &rarr;
+        <button type="button" id="btn-tour-next" class="btn btn-primary">
+          Siguiente
         </button>
       </div>
     </div>
