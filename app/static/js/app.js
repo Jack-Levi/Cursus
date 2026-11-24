@@ -29,6 +29,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
   document.getElementById("btn-sample-orders").addEventListener("click", generateSampleOrders);
   document.getElementById("btn-clear-orders").addEventListener("click", clearAllOrders);
+  
+  const csvInput = document.getElementById("input-csv-file");
+  if (csvInput) csvInput.addEventListener("change", handleCSVImport);
+
+  const csvTplBtn = document.getElementById("btn-template-csv");
+  if (csvTplBtn) csvTplBtn.addEventListener("click", downloadCSVTemplate);
+
   document.getElementById("btn-run-simulation").addEventListener("click", runSimulation);
   document.getElementById("btn-dock-view-metrics").addEventListener("click", () => switchTab("results"));
 
@@ -189,6 +196,165 @@ function clearAllOrders() {
   document.getElementById("pill-km-ga").innerText = "-- km";
   document.getElementById("pill-km-pso").innerText = "-- km";
   document.getElementById("pill-km-aco").innerText = "-- km";
+}
+
+function handleCSVImport(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const text = e.target.result;
+      const count = await processCSVContent(text);
+      if (count > 0) {
+        document.getElementById("dock-status-message").innerText = `Se importaron ${count} paquetes desde ${file.name}.`;
+      } else {
+        alert("No se encontraron registros válidos con coordenadas (latitud, longitud) en el archivo CSV.");
+      }
+    } catch (err) {
+      alert(`Error al procesar el archivo CSV: ${err.message}`);
+    } finally {
+      event.target.value = "";
+    }
+  };
+  reader.onerror = () => {
+    alert("Error al leer el archivo seleccionado.");
+    event.target.value = "";
+  };
+  reader.readAsText(file, "UTF-8");
+}
+
+async function processCSVContent(text) {
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+  if (lines.length === 0) return 0;
+
+  const firstLine = lines[0];
+  const commaCount = (firstLine.match(/,/g) || []).length;
+  const semiCount = (firstLine.match(/;/g) || []).length;
+  const tabCount = (firstLine.match(/\t/g) || []).length;
+  let delimiter = ",";
+  if (semiCount > commaCount && semiCount > tabCount) delimiter = ";";
+  else if (tabCount > commaCount && tabCount > semiCount) delimiter = "\t";
+
+  function parseCSVLine(line) {
+    const tokens = [];
+    let cur = "";
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === '"' || c === "'") {
+        inQuotes = !inQuotes;
+      } else if (c === delimiter && !inQuotes) {
+        tokens.push(cur.trim());
+        cur = "";
+      } else {
+        cur += c;
+      }
+    }
+    tokens.push(cur.trim());
+    return tokens.map(t => t.replace(/^["']|["']$/g, "").trim());
+  }
+
+  const rawHeaders = parseCSVLine(firstLine).map(h => h.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+
+  let latIdx = -1;
+  let lonIdx = -1;
+  let addrIdx = -1;
+  let typeIdx = -1;
+  let timeIdx = -1;
+
+  const latAliases = ["lat", "latitude", "latitud", "y", "coord_y", "coord_lat"];
+  const lonAliases = ["lon", "lng", "long", "longitude", "longitud", "x", "coord_x", "coord_lon"];
+  const addrAliases = ["address", "direccion", "calle", "domicilio", "nombre", "name", "ubicacion", "parada"];
+  const typeAliases = ["package_type", "package", "paquete", "tipo", "tipo_paquete"];
+  const timeAliases = ["service_time", "service_time_min", "tiempo", "tiempo_min", "minutos", "servicio"];
+
+  rawHeaders.forEach((h, idx) => {
+    if (latIdx === -1 && latAliases.includes(h)) latIdx = idx;
+    if (lonIdx === -1 && lonAliases.includes(h)) lonIdx = idx;
+    if (addrIdx === -1 && addrAliases.includes(h)) addrIdx = idx;
+    if (typeIdx === -1 && typeAliases.includes(h)) typeIdx = idx;
+    if (timeIdx === -1 && timeAliases.includes(h)) timeIdx = idx;
+  });
+
+  let dataLines = lines;
+  if (latIdx !== -1 && lonIdx !== -1) {
+    dataLines = lines.slice(1);
+  } else {
+    latIdx = 0;
+    lonIdx = 1;
+    addrIdx = 2;
+    const testRow = parseCSVLine(lines[0]);
+    const num0 = parseFloat(testRow[0]);
+    const num1 = parseFloat(testRow[1]);
+    if (isNaN(num0) || isNaN(num1)) {
+      dataLines = lines.slice(1);
+    }
+  }
+
+  const defaultServiceTime = parseFloat(document.getElementById("input-service-time").value) || 12.0;
+  const packageTypes = ["Caja estándar", "Sobre acolchado", "Paquete prioritario", "Caja mediana"];
+  const newOrders = [];
+
+  for (let i = 0; i < dataLines.length; i++) {
+    const cols = parseCSVLine(dataLines[i]);
+    if (cols.length < 2) continue;
+
+    let lat = parseFloat(cols[latIdx]);
+    let lon = parseFloat(cols[lonIdx]);
+
+    if (Math.abs(lat) > 90 && Math.abs(lon) <= 90) {
+      const tmp = lat;
+      lat = lon;
+      lon = tmp;
+    }
+
+    if (isNaN(lat) || isNaN(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) {
+      continue;
+    }
+
+    const address = (addrIdx !== -1 && cols[addrIdx]) ? cols[addrIdx] : `Parada ${state.orders.length + newOrders.length + 1}`;
+    const pkgType = (typeIdx !== -1 && cols[typeIdx]) ? cols[typeIdx] : packageTypes[newOrders.length % packageTypes.length];
+    const sTime = (timeIdx !== -1 && !isNaN(parseFloat(cols[timeIdx]))) ? parseFloat(cols[timeIdx]) : defaultServiceTime;
+
+    newOrders.push({
+      id: `TBA-${840000 + (state.orders.length + newOrders.length + 1) * 317}`,
+      lat: lat,
+      lon: lon,
+      address: address,
+      package_type: pkgType,
+      service_time_min: sTime
+    });
+  }
+
+  if (newOrders.length === 0) return 0;
+
+  newOrders.forEach(o => state.orders.push(o));
+  updateOrdersUI();
+  return newOrders.length;
+}
+
+function downloadCSVTemplate() {
+  const rows = [
+    ["latitud", "longitud", "direccion", "tipo_paquete", "tiempo_min"],
+    ["25.7402", "-100.3051", "Av. Universidad 402, San Nicolás", "Caja estándar", "12"],
+    ["25.7480", "-100.3255", "Av. Manuel L. Barragán 1250, San Nicolás", "Sobre acolchado", "10"],
+    ["25.7075", "-100.3282", "Av. Fidel Velázquez 310, Monterrey Norte", "Paquete prioritario", "15"],
+    ["25.7335", "-100.2854", "Av. Rómulo Garza 240, San Nicolás", "Caja mediana", "12"],
+    ["25.7138", "-100.3382", "Av. Almazán 810, San Nicolás", "Sobre acolchado", "12"]
+  ];
+
+  const csvContent = rows.map(r => r.map(c => `"${c}"`).join(",")).join("\r\n");
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", "plantilla_paradas_cursus.csv");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
 
 function generateSampleOrders() {
@@ -513,7 +679,7 @@ const TOUR_STEPS = [
   {
     step: 2,
     title: "Paso 2: Manifiesto de Paquetes y Guías de Envío",
-    desc: "Ingresa los domicilios de entrega de tus clientes. Puedes registrar guías escribiendo una dirección en la barra de búsqueda, haciendo clic directamente en cualquier calle del mapa o cargando el lote de prueba con 10 paquetes en Monterrey.",
+    desc: "Ingresa los domicilios de entrega de tus clientes. Puedes registrar guías buscando una dirección, haciendo clic en el mapa, cargando el lote de prueba o <strong>importando tu propio archivo CSV</strong>.",
     tab: "orders",
     highlightHub: false
   },

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cursus Logistics : Consola de Despacho y Ruteo de Paquetería</title>
+  <title>Cursus</title>
 
   <!-- Tipografía Inter y JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -32,8 +32,7 @@
         </svg>
       </div>
       <div>
-        <h1 class="brand-title">Cursus Logistics</h1>
-        <p class="brand-subtitle">Centro de Distribución y Ruteo de Paquetería</p>
+        <h1 class="brand-title">Cursus</h1>
       </div>
     </div>
 
@@ -73,7 +72,7 @@
     <!-- Acciones de Cabecera -->
     <div class="header-actions">
       <button type="button" id="btn-open-tutorial" class="header-action-btn">
-        Guía de uso
+        Tutorial
       </button>
     </div>
   </header>
@@ -110,11 +109,18 @@
           </form>
 
           <div class="quick-actions-bar">
-            <button type="button" id="btn-sample-orders" class="btn btn-secondary">
-              Cargar lote de prueba (10)
+            <button type="button" id="btn-sample-orders" class="btn btn-secondary" title="Cargar lote de prueba">
+              Lote de prueba
             </button>
-            <button type="button" id="btn-clear-orders" class="btn btn-secondary btn-danger-subtle">
-              Limpiar manifiesto
+            <label for="input-csv-file" class="btn btn-secondary btn-file-label" title="Importar archivo CSV con paradas">
+              Importar CSV
+              <input type="file" id="input-csv-file" accept=".csv,text/csv" style="display: none;">
+            </label>
+            <button type="button" id="btn-template-csv" class="btn btn-secondary" title="Descargar plantilla CSV">
+              Plantilla CSV
+            </button>
+            <button type="button" id="btn-clear-orders" class="btn btn-secondary btn-danger-subtle" title="Eliminar todos los paquetes">
+              Limpiar
             </button>
           </div>
 
@@ -278,15 +284,14 @@
 
     <!-- 1. Tarjeta de Bienvenida (Paso Inicial) -->
     <div id="tutorial-card-welcome" class="tutorial-card tutorial-card-welcome">
-      <span class="tutorial-category">Manual de Operación</span>
-      <h2 id="tut-title" class="tutorial-heading">Guía del Sistema de Despacho</h2>
+      <h2 id="tut-title" class="tutorial-heading">Tutorial</h2>
       <p class="tutorial-description">
-        Esta plataforma simula el ruteo de paquetería de última milla desde un centro de distribución. Compara Algoritmos Genéticos, Optimización por Enjambre y Colonia de Hormigas evaluando tiempos de traslado vial, atención en domicilio y retorno seguro dentro de la jornada laboral.
+        Esta plataforma simula el ruteo de paquetería desde un centro de distribución. Compara Algoritmos Genéticos (GA), Optimización por Enjambre (PSO) y Colonia de Hormigas (ACO) evaluando tiempos de traslado vial, atención en domicilio y retorno seguro dentro de la jornada laboral.
       </p>
 
       <div class="tutorial-actions-row">
         <button type="button" id="btn-start-tour" class="btn btn-primary">
-          Iniciar guía paso a paso
+          Iniciar tutorial
         </button>
         <button type="button" id="btn-skip-tour" class="btn btn-secondary">
           Cerrar
