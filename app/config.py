@@ -1,7 +1,7 @@
 import os
 
-# Centro de Distribución predeterminado (Área metropolitana de Monterrey / San Nicolás)
-DEFAULT_HUB_NAME = "Centro de Distribución Cursus Norte"
+# Centro de Distribución predeterminado (Estación de Entrega Monterrey Norte / San Nicolás)
+DEFAULT_HUB_NAME = "Estación de Entrega DS-MTY1 (Monterrey Norte)"
 DEFAULT_HUB_LAT = 25.7250
 DEFAULT_HUB_LON = -100.3130
 

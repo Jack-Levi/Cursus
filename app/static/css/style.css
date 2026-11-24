@@ -1,41 +1,47 @@
 /* ═══════════════════════════════════════════════════════════════
-   CURSUS  Design System
-   Swiss Editorial Cartography & High-End Minimalist Aesthetics
-   Inspirado en Autumn-Solara (Jack-Levi)
+   CURSUS LOGISTICS  Design System
+   Amazon Delivery Station & Package Operations Dispatch Console
+   Estilo Industrial de Última Milla (AMZL / Relay Operations)
    ═══════════════════════════════════════════════════════════════ */
 
 :root {
-  /* Lienzo y Superficies de Alta Fidelidad (Cero Azules Neón) */
-  --dark-bg: #0A0A0C;
-  --dark-panel: #121316;
-  --surface-elevated: #16171B;
-  --surface-hover: #1E2026;
-  --surface-input: #0E0F12;
+  /* Lienzo y Superficies de Alta Fidelidad - Amazon Logistics Identity */
+  --dark-bg: #0D1117;          /* Canvas base industrial */
+  --dark-panel: #131921;       /* Panel de control y cabecera Amazon Ink */
+  --surface-elevated: #1C2430; /* Tarjetas elevadas de despacho */
+  --surface-hover: #242E3D;    /* Interacción hover en manifiesto */
+  --surface-input: #0F141C;    /* Superficie de entrada de guías */
 
   /* Bordes Hairline */
-  --dark-border: rgba(255, 255, 255, 0.08);
-  --dark-border-strong: rgba(255, 255, 255, 0.16);
-  --border-focus: #FFFFFF;
+  --dark-border: rgba(255, 255, 255, 0.09);
+  --dark-border-strong: rgba(255, 255, 255, 0.18);
+  --border-focus: #FF9900;
 
-  /* Tipografía Editorial */
-  --dark-text: #F4F4F6;
-  --dark-text-dim: #8E9299;
-  --dark-text-muted: #5A5E66;
+  /* Tipografía Operativa */
+  --dark-text: #F0F2F5;
+  --dark-text-dim: #94A3B8;
+  --dark-text-muted: #64748B;
 
-  /* Signature Neutral Luxury Accents */
-  --btn-primary-bg: #FFFFFF;
-  --btn-primary-text: #0A0A0C;
-  --btn-primary-hover: #E4E4E7;
+  /* Amazon Signature Logistics Accents */
+  --amazon-amber: #FF9900;
+  --amazon-amber-hover: #FA8900;
+  --amazon-amber-active: #DE7900;
+  --amazon-amber-soft: rgba(255, 153, 0, 0.12);
+  --amazon-amber-glow: rgba(255, 153, 0, 0.28);
+
+  --btn-primary-bg: #FF9900;
+  --btn-primary-text: #0F1111;
+  --btn-primary-hover: #FA8900;
 
   --btn-secondary-bg: rgba(255, 255, 255, 0.06);
-  --btn-secondary-border: rgba(255, 255, 255, 0.10);
-  --btn-secondary-hover: rgba(255, 255, 255, 0.12);
+  --btn-secondary-border: rgba(255, 255, 255, 0.14);
+  --btn-secondary-hover: rgba(255, 255, 255, 0.10);
 
-  /* Acentos Cartográficos Científicos */
-  --route-ga: #38BDF8;   /* Azul acero polar */
-  --route-pso: #34D399;  /* Esmeralda nórdico */
-  --route-aco: #FBBF24;  /* Ámbar solar */
-  --hub-crimson: #FB7185; /* Rubí técnico de base */
+  /* Acentos de Flota y Ruteo */
+  --route-ga: #00A8E1;   /* Prime Cyan - Algoritmo Genético */
+  --route-pso: #10B981;  /* On-Time Emerald - Enjambre de Partículas */
+  --route-aco: #FF9900;  /* Fleet Amber - Colonia de Hormigas */
+  --hub-color: #FF9900;  /* Estación de Entrega Hub */
 }
 
 * {
@@ -110,9 +116,9 @@ code,
   justify-content: center;
   width: 26px;
   height: 26px;
-  background-color: var(--surface-elevated);
-  border: 1px solid var(--dark-border);
-  color: var(--dark-text);
+  background-color: var(--amazon-amber-soft);
+  border: 1px solid rgba(255, 153, 0, 0.4);
+  color: var(--amazon-amber);
   border-radius: 4px;
 }
 
@@ -234,8 +240,8 @@ code,
 }
 
 .tab-btn.active {
-  color: var(--dark-text);
-  border-bottom-color: #FFFFFF;
+  color: #FFFFFF;
+  border-bottom-color: var(--amazon-amber);
   background-color: var(--surface-elevated);
 }
 
@@ -309,24 +315,31 @@ code,
 }
 
 .btn:focus-visible {
-  outline: 2px solid #FFFFFF;
+  outline: 2px solid var(--amazon-amber);
   outline-offset: 2px;
 }
 
-/* Botón Principal: Signature Neutral Luxury (Blanco Puro) */
+/* Botón Principal: Amazon Logistics Amber */
 .btn-primary {
   background-color: var(--btn-primary-bg);
   color: var(--btn-primary-text);
   border-color: var(--btn-primary-bg);
-  font-weight: 600;
+  font-weight: 700;
   width: 100%;
   padding: 0.75rem;
   font-size: 0.84rem;
   letter-spacing: 0.02em;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(255, 153, 0, 0.25);
 }
 
 .btn-primary:hover:not(:disabled) {
   background-color: var(--btn-primary-hover);
+  border-color: var(--btn-primary-hover);
+  color: #0F1111;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 153, 0, 0.35);
+}
   border-color: var(--btn-primary-hover);
   transform: translateY(-1px);
 }
@@ -439,13 +452,13 @@ code,
   width: 24px;
   height: 24px;
   background-color: var(--dark-panel);
-  border: 1px solid var(--dark-border-strong);
-  color: var(--dark-text);
-  border-radius: 50%;
+  border: 1px solid var(--amazon-amber);
+  color: var(--amazon-amber);
+  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 700;
   flex-shrink: 0;
 }
@@ -453,6 +466,29 @@ code,
 .order-main-info {
   flex: 1;
   min-width: 0;
+}
+
+.order-tracking-tag {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.15rem;
+}
+
+.tracking-code {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--amazon-amber);
+  letter-spacing: 0.03em;
+}
+
+.package-type-pill {
+  font-size: 0.62rem;
+  padding: 0.08rem 0.35rem;
+  border-radius: 2px;
+  background-color: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--dark-border);
+  color: var(--dark-text-dim);
 }
 
 .order-address-text {
@@ -519,9 +555,9 @@ code,
   letter-spacing: 0.04em;
   padding: 0.15rem 0.45rem;
   border-radius: 3px;
-  background-color: rgba(251, 113, 133, 0.12);
-  color: var(--hub-crimson);
-  border: 1px solid rgba(251, 113, 133, 0.3);
+  background-color: var(--amazon-amber-soft);
+  color: var(--amazon-amber);
+  border: 1px solid rgba(255, 153, 0, 0.35);
 }
 
 .hub-info-rows {
@@ -608,7 +644,7 @@ code,
 }
 
 .text-accent {
-  color: #FFFFFF;
+  color: var(--amazon-amber);
 }
 
 .cards-vertical-stack {
@@ -647,11 +683,13 @@ code,
 .badge-winner {
   font-size: 0.65rem;
   font-weight: 700;
-  letter-spacing: 0.02em;
-  padding: 0.1rem 0.4rem;
+  letter-spacing: 0.03em;
+  padding: 0.12rem 0.45rem;
   border-radius: 2px;
-  background-color: rgba(255, 255, 255, 0.12);
-  color: #FFFFFF;
+  background-color: var(--amazon-amber);
+  color: #0F1111;
+  border: none;
+}
   border: 1px solid rgba(255, 255, 255, 0.25);
 }
 
@@ -866,19 +904,19 @@ code,
   border: none;
 }
 
-/* Animación de Pulso para el Hub (Símbolo Rojo) en el Tutorial */
+/* Animación de Pulso para el Hub (Estación de Entrega) en el Tutorial */
 @keyframes hubPulseGlow {
   0% {
     transform: scale(1);
-    filter: drop-shadow(0 0 0 rgba(251, 113, 133, 0.7));
+    filter: drop-shadow(0 0 0 rgba(255, 153, 0, 0.7));
   }
   50% {
     transform: scale(1.18);
-    filter: drop-shadow(0 0 16px rgba(251, 113, 133, 0.95));
+    filter: drop-shadow(0 0 16px rgba(255, 153, 0, 0.95));
   }
   100% {
     transform: scale(1);
-    filter: drop-shadow(0 0 0 rgba(251, 113, 133, 0.7));
+    filter: drop-shadow(0 0 0 rgba(255, 153, 0, 0.7));
   }
 }
 
@@ -887,7 +925,7 @@ code,
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   CURSUS  Tutorial Overlay System (Patrón Autumn-Solara)
+   CURSUS LOGISTICS  Tutorial Overlay System
    ═══════════════════════════════════════════════════════════════ */
 
 .header-actions {
@@ -912,9 +950,9 @@ code,
 }
 
 .header-pill-tutorial:hover {
-  border-color: #FFFFFF;
+  border-color: var(--amazon-amber);
   background-color: var(--surface-hover);
-  color: #FFFFFF;
+  color: var(--amazon-amber);
 }
 
 .tutorial-backdrop {
@@ -925,7 +963,7 @@ code,
   align-items: center;
   justify-content: center;
   padding: 1.25rem;
-  background-color: rgba(5, 5, 8, 0.82);
+  background-color: rgba(5, 5, 8, 0.85);
   backdrop-filter: blur(8px);
   user-select: none;
   animation: tutFadeIn 0.22s ease-out;
@@ -946,10 +984,10 @@ code,
   z-index: 10;
   background-color: var(--dark-panel);
   border: 1px solid var(--dark-border-strong);
-  border-radius: 16px;
-  max-width: 520px;
+  border-radius: 12px;
+  max-width: 530px;
   width: 100%;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 153, 0, 0.15);
   animation: tutScale 0.24s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -964,29 +1002,30 @@ code,
 }
 
 .tutorial-icon-badge {
-  width: 44px;
-  height: 44px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background-color: var(--amazon-amber-soft);
+  border: 1px solid rgba(255, 153, 0, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 1.25rem auto;
-  color: #FFFFFF;
+  color: var(--amazon-amber);
 }
 
 .tutorial-sys-label {
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: var(--dark-text-dim);
+  color: var(--amazon-amber);
   display: block;
   margin-bottom: 0.65rem;
+  font-weight: 700;
 }
 
 .tutorial-heading {
-  font-size: 1.5rem;
+  font-size: 1.45rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   color: var(--dark-text);
@@ -1007,26 +1046,26 @@ code,
   gap: 0.75rem;
 }
 
-.pill-btn-white {
+.pill-btn-amber {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
   padding: 0.75rem 1.25rem;
   border-radius: 999px;
-  background-color: var(--btn-primary-bg);
-  color: var(--btn-primary-text);
+  background-color: var(--amazon-amber);
+  color: #0F1111;
   border: none;
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
   cursor: pointer;
   transition: all 0.2s ease;
   width: 100%;
 }
 
-.pill-btn-white:hover {
-  background-color: var(--btn-primary-hover);
+.pill-btn-amber:hover {
+  background-color: var(--amazon-amber-hover);
   transform: translateY(-1px);
 }
 
@@ -1058,9 +1097,9 @@ code,
 .tutorial-step-pill {
   font-size: 0.68rem;
   font-weight: 700;
-  color: #FFFFFF;
-  background-color: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--amazon-amber);
+  background-color: var(--amazon-amber-soft);
+  border: 1px solid rgba(255, 153, 0, 0.35);
   padding: 0.25rem 0.65rem;
   border-radius: 999px;
   letter-spacing: 0.04em;
@@ -1117,7 +1156,7 @@ code,
 
 .indicator-dot.active {
   width: 28px;
-  background-color: #FFFFFF;
+  background-color: var(--amazon-amber);
 }
 
 .tutorial-nav-footer {
@@ -1129,20 +1168,20 @@ code,
   border-top: 1px solid var(--dark-border);
 }
 
-.btn-primary-white {
-  background-color: #FFFFFF;
-  color: #0A0A0C;
-  border: 1px solid #FFFFFF;
-  padding: 0.45rem 1rem;
-  font-size: 0.74rem;
-  font-weight: 600;
+.btn-primary-amber {
+  background-color: var(--amazon-amber);
+  color: #0F1111;
+  border: 1px solid var(--amazon-amber);
+  padding: 0.45rem 1.1rem;
+  font-size: 0.76rem;
+  font-weight: 700;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.btn-primary-white:hover {
-  background-color: #E4E4E7;
-  border-color: #E4E4E7;
+.btn-primary-amber:hover {
+  background-color: var(--amazon-amber-hover);
+  border-color: var(--amazon-amber-hover);
   transform: translateY(-1px);
 }

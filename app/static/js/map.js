@@ -5,44 +5,45 @@ let routeLayerGA;
 let routeLayerPSO;
 let routeLayerACO;
 
-// Marcador SVG para el Centro de Distribución (Rubí Técnico #FB7185)
+// Marcador SVG para la Estación de Distribución (Amazon Amber #FF9900)
 const hubSvgIcon = L.divIcon({
   className: "leaflet-hub-marker",
   html: `
-    <svg width="32" height="38" viewBox="0 0 32 38" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <filter id="hub-shadow" x="0" y="0" width="32" height="38" filterUnits="userSpaceOnUse">
-        <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000000" flood-opacity="0.6"/>
+    <svg width="34" height="42" viewBox="0 0 34 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <filter id="hub-shadow" x="0" y="0" width="34" height="42" filterUnits="userSpaceOnUse">
+        <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000000" flood-opacity="0.7"/>
       </filter>
       <g filter="url(#hub-shadow)">
-        <path d="M16 2C8.82 2 3 7.82 3 15C3 23.5 16 34 16 34C16 34 29 23.5 29 15C29 7.82 23.18 2 16 2Z" fill="#121316" stroke="#FB7185" stroke-width="2"/>
-        <circle cx="16" cy="14" r="5" fill="#FB7185"/>
+        <path d="M17 2C9.27 2 3 8.27 3 16C3 25.5 17 38 17 38C17 38 31 25.5 31 16C31 8.27 24.73 2 17 2Z" fill="#131921" stroke="#FF9900" stroke-width="2.5"/>
+        <rect x="11.5" y="10.5" width="11" height="11" rx="2" fill="#FF9900"/>
+        <path d="M11.5 14H22.5M17 10.5V21.5" stroke="#131921" stroke-width="1.2"/>
       </g>
     </svg>
   `,
-  iconSize: [32, 38],
-  iconAnchor: [16, 34],
-  popupAnchor: [0, -32]
+  iconSize: [34, 42],
+  iconAnchor: [17, 38],
+  popupAnchor: [0, -36]
 });
 
-// Marcador SVG numerado para órdenes (Obsidiana con borde blanco y tipografía monoespaciada)
+// Marcador SVG numerado para paquetes de entrega (Amazon dark slate con borde ámbar y tipografía monoespaciada)
 function createOrderSvgIcon(index) {
   const label = index < 10 ? `0${index}` : `${index}`;
   return L.divIcon({
     className: "leaflet-order-marker",
     html: `
-      <svg width="26" height="32" viewBox="0 0 26 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <filter id="pin-shadow-${index}" x="0" y="0" width="26" height="32" filterUnits="userSpaceOnUse">
-          <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000000" flood-opacity="0.5"/>
+      <svg width="28" height="34" viewBox="0 0 28 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <filter id="pin-shadow-${index}" x="0" y="0" width="28" height="34" filterUnits="userSpaceOnUse">
+          <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#000000" flood-opacity="0.6"/>
         </filter>
         <g filter="url(#pin-shadow-${index})">
-          <path d="M13 1C6.92 1 2 5.92 2 12C2 19 13 29 13 29C13 29 24 19 24 12C24 5.92 19.08 1 13 1Z" fill="#16171B" stroke="#FFFFFF" stroke-width="1.5"/>
-          <text x="13" y="15" fill="#FFFFFF" font-size="9" font-weight="700" text-anchor="middle" font-family="'JetBrains Mono', monospace">${label}</text>
+          <path d="M14 1C7.37 1 2 6.37 2 13C2 20.8 14 31 14 31C14 31 26 20.8 26 13C26 6.37 20.63 1 14 1Z" fill="#1C2430" stroke="#FF9900" stroke-width="1.6"/>
+          <text x="14" y="16" fill="#FFFFFF" font-size="9.5" font-weight="700" text-anchor="middle" font-family="'JetBrains Mono', monospace">${label}</text>
         </g>
       </svg>
     `,
-    iconSize: [26, 32],
-    iconAnchor: [13, 29],
-    popupAnchor: [0, -26]
+    iconSize: [28, 34],
+    iconAnchor: [14, 31],
+    popupAnchor: [0, -28]
   });
 }
 
@@ -68,7 +69,7 @@ function initMap(initialLat, initialLon) {
     draggable: true
   }).addTo(map);
 
-  hubMarker.bindPopup("<strong>Centro de Distribución (Hub)</strong><br>Arrastre este marcador para reubicar la base de despacho en cualquier dirección.");
+  hubMarker.bindPopup("<strong>Estación de Entrega (Hub DS-MTY1)</strong><br>Arrastre este marcador para reubicar la nave industrial de salida y retorno.");
 
   hubMarker.on("dragend", function (e) {
     const pos = e.target.getLatLng();
@@ -90,7 +91,7 @@ function renderOrdersOnMap(orders) {
     const marker = L.marker([order.lat, order.lon], {
       icon: createOrderSvgIcon(idx + 1)
     });
-    marker.bindPopup(`<strong>Parada ${idx + 1}</strong><br>${order.address || "Coordenada registrada"}<br><span class="font-mono">Atención: ${order.service_time_min} min</span>`);
+    marker.bindPopup(`<strong>Parada ${idx + 1} // ${order.id || "TBA"}</strong><br>${order.address || "Dirección registrada"}<br><span class="font-mono">Tiempo en puerta: ${order.service_time_min} min</span>`);
     ordersLayer.addLayer(marker);
   });
 

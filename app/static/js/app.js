@@ -1,5 +1,5 @@
 const state = {
-  hub: { name: "Centro de Distribución Cursus Norte", lat: 25.7250, lon: -100.3130 },
+  hub: { name: "Estación de Entrega DS-MTY1 (Monterrey Norte)", lat: 25.7250, lon: -100.3130 },
   orders: [],
   shift: { max_hours: 8.0, service_time_per_order_min: 12.0, buffer_time_min: 15.0 },
   results: null,
@@ -81,7 +81,7 @@ function switchTab(tabName) {
 function updateHeaderAndHubUI() {
   document.getElementById("hub-coords").innerText = `${state.hub.lat.toFixed(4)}, ${state.hub.lon.toFixed(4)}`;
   document.getElementById("hub-name").innerText = state.hub.name;
-  document.getElementById("header-hub-name").innerText = state.hub.name.split(",")[0];
+  document.getElementById("header-hub-name").innerText = state.hub.name.split(",")[0].replace("Estación de Entrega ", "");
   document.getElementById("header-shift-label").innerText = `${state.shift.max_hours.toFixed(1)} hrs`;
 }
 
@@ -93,17 +93,17 @@ window.onHubMoved = async (lat, lon) => {
     const res = await fetch(`/api/reverse-geocode?lat=${lat}&lon=${lon}`);
     if (res.ok) {
       const data = await res.json();
-      state.hub.name = data.display_name;
+      state.hub.name = `Estación DS (${data.display_name.split(",").slice(0, 2).join(",")})`;
     }
   } catch (e) {
-    state.hub.name = `Base (${lat.toFixed(4)}, ${lon.toFixed(4)})`;
+    state.hub.name = `Estación DS (${lat.toFixed(4)}, ${lon.toFixed(4)})`;
   }
 
   updateHeaderAndHubUI();
 };
 
 window.onMapClicked = async (lat, lon) => {
-  let display = `Parada (${lat.toFixed(4)}, ${lon.toFixed(4)})`;
+  let display = `Dirección en (${lat.toFixed(4)}, ${lon.toFixed(4)})`;
   try {
     const res = await fetch(`/api/reverse-geocode?lat=${lat}&lon=${lon}`);
     if (res.ok) {
@@ -145,7 +145,7 @@ async function handleAddAddress() {
     addOrder(data.lat, data.lon, data.display_name.split(",").slice(0, 3).join(","));
     input.value = "";
   } catch (e) {
-    alert("Error de conexión al geocodificar.");
+    alert("Error de conexión al geocodificar la dirección.");
   } finally {
     btn.innerText = originalText;
     btn.disabled = false;
@@ -154,11 +154,16 @@ async function handleAddAddress() {
 
 function addOrder(lat, lon, address = "") {
   const serviceTime = parseFloat(document.getElementById("input-service-time").value) || 12.0;
+  const trackingNumber = `TBA-${Math.floor(100000 + Math.random() * 900000)}`;
+  const packageTypes = ["Caja Estándar", "Sobre Acolchado", "Paquete Prime", "Caja Mediana"];
+  const packageType = packageTypes[Math.floor(Math.random() * packageTypes.length)];
+
   const newOrder = {
-    id: `ORD-${state.orders.length + 1}`,
+    id: trackingNumber,
     lat: lat,
     lon: lon,
-    address: address || `Parada ${state.orders.length + 1}`,
+    address: address || `Destino ${state.orders.length + 1}`,
+    package_type: packageType,
     service_time_min: serviceTime
   };
   state.orders.push(newOrder);
@@ -167,7 +172,6 @@ function addOrder(lat, lon, address = "") {
 
 function removeOrder(index) {
   state.orders.splice(index, 1);
-  state.orders.forEach((o, i) => o.id = `ORD-${i + 1}`);
   updateOrdersUI();
 }
 
@@ -180,7 +184,7 @@ function clearAllOrders() {
   document.getElementById("results-empty-notice").style.display = "flex";
   document.getElementById("results-content").style.display = "none";
   document.getElementById("btn-dock-view-metrics").style.display = "none";
-  document.getElementById("dock-status-message").innerText = "Cola vacía. Ingrese órdenes para optimizar.";
+  document.getElementById("dock-status-message").innerText = "Manifiesto vacío. Agregue paquetes para optimizar.";
 
   document.getElementById("pill-km-ga").innerText = "-- km";
   document.getElementById("pill-km-pso").innerText = "-- km";
@@ -191,23 +195,31 @@ function generateSampleOrders() {
   clearAllOrders();
   const baseLat = state.hub.lat;
   const baseLon = state.hub.lon;
-  const count = 10;
   const serviceTime = parseFloat(document.getElementById("input-service-time").value) || 12.0;
 
-  for (let i = 1; i <= count; i++) {
-    const angle = (i * 2 * Math.PI) / count + (Math.random() * 0.3 - 0.15);
-    const radius = 0.018 + Math.random() * 0.032;
-    const lat = baseLat + radius * Math.cos(angle);
-    const lon = baseLon + radius * Math.sin(angle) * 1.15;
+  const SAMPLE_PACKAGES = [
+    { address: "Av. Universidad 402, San Nicolás", latOffset: 0.015, lonOffset: 0.008, type: "Caja Estándar" },
+    { address: "Av. Manuel L. Barragán 1250, San Nicolás", latOffset: 0.022, lonOffset: -0.012, type: "Sobre Acolchado" },
+    { address: "Av. Fidel Velázquez 310, Monterrey Norte", latOffset: -0.018, lonOffset: -0.015, type: "Paquete Prime" },
+    { address: "Av. Rómulo Garza 240, San Nicolás", latOffset: 0.008, lonOffset: 0.028, type: "Caja Mediana" },
+    { address: "Av. Almazán 810, San Nicolás", latOffset: -0.012, lonOffset: -0.025, type: "Sobre Acolchado" },
+    { address: "Av. Sendero Divisorio 200, General Escobedo", latOffset: 0.038, lonOffset: -0.005, type: "Caja Estándar" },
+    { address: "Av. Raúl Salinas Lozano 540, General Escobedo", latOffset: 0.032, lonOffset: -0.032, type: "Paquete Prime" },
+    { address: "Av. Nogalar Sur 1100, San Nicolás", latOffset: -0.005, lonOffset: 0.016, type: "Caja Voluminosa" },
+    { address: "Av. Benito Juárez 320, San Nicolás Centro", latOffset: 0.018, lonOffset: 0.022, type: "Caja Estándar" },
+    { address: "Av. Churubusco 900, Monterrey", latOffset: -0.028, lonOffset: 0.012, type: "Sobre Acolchado" }
+  ];
 
+  SAMPLE_PACKAGES.forEach((p, idx) => {
     state.orders.push({
-      id: `ORD-${i}`,
-      lat: lat,
-      lon: lon,
-      address: `Parada ${i}: Sector ${String.fromCharCode(64 + i)}`,
+      id: `TBA-${840000 + (idx + 1) * 1153}`,
+      lat: baseLat + p.latOffset,
+      lon: baseLon + p.lonOffset,
+      address: p.address,
+      package_type: p.type,
       service_time_min: serviceTime
     });
-  }
+  });
 
   updateOrdersUI();
 }
@@ -223,7 +235,7 @@ function updateOrdersUI() {
 
   container.innerHTML = "";
   countBadge.innerText = state.orders.length;
-  headerCount.innerText = state.orders.length;
+  headerCount.innerText = `${state.orders.length} paquetes`;
 
   if (state.orders.length === 0) {
     emptyState.style.display = "flex";
@@ -238,14 +250,19 @@ function updateOrdersUI() {
     const li = document.createElement("li");
     li.className = "order-card-row";
     const label = (idx + 1) < 10 ? `0${idx + 1}` : `${idx + 1}`;
+    const pkgType = o.package_type || "Caja Estándar";
 
     li.innerHTML = `
       <div class="order-badge-num font-mono">${label}</div>
       <div class="order-main-info">
+        <div class="order-tracking-tag font-mono">
+          <span class="tracking-code">${o.id}</span>
+          <span class="package-type-pill">${pkgType}</span>
+        </div>
         <div class="order-address-text" title="${o.address}">${o.address}</div>
-        <div class="order-meta-text font-mono">${o.lat.toFixed(4)}, ${o.lon.toFixed(4)} · ${o.service_time_min}m entrega</div>
+        <div class="order-meta-text font-mono">${o.lat.toFixed(4)}, ${o.lon.toFixed(4)} · ${o.service_time_min}m en puerta</div>
       </div>
-      <button type="button" class="order-delete-btn" onclick="removeOrder(${idx})" aria-label="Eliminar orden ${idx + 1}">&times;</button>
+      <button type="button" class="order-delete-btn" onclick="removeOrder(${idx})" aria-label="Eliminar paquete ${idx + 1}">&times;</button>
     `;
     container.appendChild(li);
   });
@@ -256,11 +273,11 @@ async function runSimulation() {
 
   const btn = document.getElementById("btn-run-simulation");
   const originalText = btn.innerText;
-  btn.innerText = "Descargando red vial y optimizando...";
+  btn.innerText = "Descargando red vial y optimizando despacho...";
   btn.disabled = true;
 
   const statusDock = document.getElementById("dock-status-message");
-  statusDock.innerText = "Ejecutando GA, PSO y ACO con restricciones de jornada...";
+  statusDock.innerText = "Optimizando ruteo de última milla con GA, PSO y ACO...";
 
   const shiftHours = parseFloat(document.getElementById("input-shift-hours").value) || 8.0;
   const serviceTime = parseFloat(document.getElementById("input-service-time").value) || 12.0;
@@ -312,7 +329,7 @@ function renderSimulationResults(data) {
   const bestAlgo = data.best_algorithm_by_distance;
   const bestRes = results[bestAlgo];
   document.getElementById("stat-best-distance").innerText = `${bestAlgo} (${bestRes.total_distance_km} km)`;
-  document.getElementById("stat-fulfillment").innerText = `${bestRes.orders_delivered} de ${bestRes.orders_delivered + bestRes.orders_dropped} órdenes`;
+  document.getElementById("stat-fulfillment").innerText = `${bestRes.orders_delivered} de ${bestRes.orders_delivered + bestRes.orders_dropped} entregados`;
 
   document.getElementById("dock-status-message").innerText = `Ruta óptima: ${bestAlgo} con ${bestRes.total_distance_km} km en ${bestRes.total_time_hours} hrs`;
 
@@ -325,9 +342,9 @@ function renderSimulationResults(data) {
   document.getElementById("pill-km-aco").innerText = `${results.ACO.total_distance_km} km`;
 
   clearRoutes();
-  drawRoute(routeLayerGA, results.GA.route_polyline, "#38BDF8", 3.2);
-  drawRoute(routeLayerPSO, results.PSO.route_polyline, "#34D399", 3.2, "6, 6");
-  drawRoute(routeLayerACO, results.ACO.route_polyline, "#FBBF24", 3.2, "2, 6");
+  drawRoute(routeLayerGA, results.GA.route_polyline, "#00A8E1", 3.2);
+  drawRoute(routeLayerPSO, results.PSO.route_polyline, "#10B981", 3.2, "6, 6");
+  drawRoute(routeLayerACO, results.ACO.route_polyline, "#FF9900", 3.2, "2, 6");
 
   renderConvergenceChart(results);
   renderScheduleTimeline(bestRes);
@@ -340,23 +357,23 @@ function renderSideMetricCard(containerId, res, isOptimal) {
   container.innerHTML = `
     <div class="card-top">
       <span class="card-algo-name">${res.name}</span>
-      ${isOptimal ? '<span class="badge-winner font-mono">ÓPTIMO</span>' : ''}
+      ${isOptimal ? '<span class="badge-winner font-mono">ÓPTIMO PARA FLOTA</span>' : ''}
     </div>
     <div class="metric-grid-2x2 font-mono">
       <div class="m-item">
-        <span class="m-label">Distancia</span>
+        <span class="m-label">Distancia Total</span>
         <span class="m-data">${res.total_distance_km} km</span>
       </div>
       <div class="m-item">
-        <span class="m-label">Tiempo Total</span>
+        <span class="m-label">Tiempo de Ruta</span>
         <span class="m-data">${res.total_time_hours} hrs</span>
       </div>
       <div class="m-item">
-        <span class="m-label">Entregadas</span>
+        <span class="m-label">Paquetes SLA</span>
         <span class="m-data">${res.orders_delivered} / ${res.orders_delivered + res.orders_dropped}</span>
       </div>
       <div class="m-item">
-        <span class="m-label">Cómputo</span>
+        <span class="m-label">Cálculo</span>
         <span class="m-data">${res.execution_time_sec} s</span>
       </div>
     </div>
@@ -383,27 +400,27 @@ function renderConvergenceChart(results) {
       labels: labels,
       datasets: [
         {
-          label: "GA",
+          label: "GA (Prime)",
           data: gaData,
-          borderColor: "#38BDF8",
+          borderColor: "#00A8E1",
           backgroundColor: "transparent",
-          borderWidth: 1.5,
+          borderWidth: 1.8,
           pointRadius: 0
         },
         {
-          label: "PSO",
+          label: "PSO (On-Time)",
           data: psoData,
-          borderColor: "#34D399",
+          borderColor: "#10B981",
           backgroundColor: "transparent",
-          borderWidth: 1.5,
+          borderWidth: 1.8,
           pointRadius: 0
         },
         {
-          label: "ACO",
+          label: "ACO (Fleet)",
           data: acoData,
-          borderColor: "#FBBF24",
+          borderColor: "#FF9900",
           backgroundColor: "transparent",
-          borderWidth: 1.5,
+          borderWidth: 1.8,
           pointRadius: 0
         }
       ]
@@ -416,7 +433,7 @@ function renderConvergenceChart(results) {
         legend: {
           position: "top",
           labels: {
-            color: "#8E9299",
+            color: "#94A3B8",
             font: { family: "'JetBrains Mono', monospace", size: 9 },
             boxWidth: 10
           }
@@ -425,12 +442,12 @@ function renderConvergenceChart(results) {
       scales: {
         x: {
           title: { display: false },
-          ticks: { color: "#5A5E66", font: { family: "'JetBrains Mono', monospace", size: 8 } },
+          ticks: { color: "#64748B", font: { family: "'JetBrains Mono', monospace", size: 8 } },
           grid: { color: "rgba(255, 255, 255, 0.05)" }
         },
         y: {
           title: { display: false },
-          ticks: { color: "#5A5E66", font: { family: "'JetBrains Mono', monospace", size: 8 } },
+          ticks: { color: "#64748B", font: { family: "'JetBrains Mono', monospace", size: 8 } },
           grid: { color: "rgba(255, 255, 255, 0.05)" }
         }
       }
@@ -446,7 +463,7 @@ function renderScheduleTimeline(bestRes) {
   startItem.className = "timeline-item";
   startItem.innerHTML = `
     <span class="timeline-time">00:00</span>
-    <span class="timeline-desc">Salida de Base (${state.hub.name.split(",")[0]})</span>
+    <span class="timeline-desc">Salida de Estación DS-MTY1 (Carga completada)</span>
     <span class="timeline-dist">0.0 km</span>
   `;
   container.appendChild(startItem);
@@ -458,10 +475,11 @@ function renderScheduleTimeline(bestRes) {
     const mins = Math.floor(stop.arrival_time_min % 60);
     const timeFormatted = `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
     const num = (i + 1) < 10 ? `0${i + 1}` : `${i + 1}`;
+    const tracking = stop.order_id || `TBA-${840000 + (i + 1) * 1153}`;
 
     item.innerHTML = `
       <span class="timeline-time">${timeFormatted}</span>
-      <span class="timeline-desc">#${num} ${stop.address}</span>
+      <span class="timeline-desc">#${num} ${tracking} · ${stop.address}</span>
       <span class="timeline-dist">+${stop.distance_from_prev_km} km</span>
     `;
     container.appendChild(item);
@@ -474,55 +492,55 @@ function renderScheduleTimeline(bestRes) {
   const endM = Math.floor(totalMin % 60);
   endItem.innerHTML = `
     <span class="timeline-time">${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}</span>
-    <span class="timeline-desc">Retorno a Base (${state.hub.name.split(",")[0]})</span>
+    <span class="timeline-desc">Retorno a Estación DS-MTY1 (Fin de jornada laboral)</span>
     <span class="timeline-dist">${bestRes.total_distance_km} km</span>
   `;
   container.appendChild(endItem);
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   MÓDULO TUTORIAL // Patrón Autumn-Solara
+   MÓDULO TUTORIAL // Amazon Logistics Onboarding
    ═══════════════════════════════════════════════════════════════ */
 
 const TOUR_STEPS = [
   {
     step: 1,
-    title: "Paso 1: Centro de Distribución y Reubicación",
-    desc: "El marcador rojo con halo técnico en el mapa señala tu base de operaciones. <strong>Puedes hacer clic y arrastrar el símbolo rojo a cualquier dirección o colonia de la ciudad</strong>; al soltarlo, Cursus geocodifica automáticamente la nueva calle y reconfigura la matriz de distancias.",
+    title: "Paso 1: Estación de Entrega (Hub) y Reubicación",
+    desc: "El marcador ámbar en el mapa señala tu base de operaciones y almacén de paquetería. <strong>Puedes hacer clic y arrastrar el símbolo del almacén a cualquier dirección o colonia de la ciudad</strong>; al soltarlo, Cursus geocodifica la nueva nave industrial y recalcula la matriz de distancias viales.",
     tab: "params",
     highlightHub: true
   },
   {
     step: 2,
-    title: "Paso 2: Registro de Órdenes y Geocodificación",
-    desc: "Agrega paradas de entrega de tres formas: haciendo clic directamente sobre cualquier calle del mapa interactivo, escribiendo una dirección en la barra de búsqueda o cargando las 10 paradas de prueba predefinidas en Monterrey.",
+    title: "Paso 2: Manifiesto de Paquetes y Guías de Envío",
+    desc: "Ingresa los domicilios de entrega de tus clientes. Puedes registrar guías escribiendo una dirección en la barra de búsqueda, haciendo clic directamente en cualquier calle del mapa o cargando el lote de prueba con 10 paquetes y códigos de rastreo TBA.",
     tab: "orders",
     highlightHub: false
   },
   {
     step: 3,
-    title: "Paso 3: Restricciones de Jornada Laboral",
-    desc: "Establece el límite de horas de turno del repartidor (ej. 8.0 hrs), el tiempo de atención en cada domicilio (12 min) y el margen de regreso seguro a la base (15 min). Si la ruta total excede la jornada, el sistema penaliza y descarta las entregas inviables.",
+    title: "Paso 3: Ventana Laboral y Restricciones de Turno",
+    desc: "Configura el límite de horas del repartidor (ej. 8.0 hrs), el tiempo promedio de atención en puerta por paquete (12 min) y el buffer de retorno a la estación (15 min). La optimización descarta paradas que comprometan el regreso a tiempo al almacén.",
     tab: "params",
     highlightHub: false
   },
   {
     step: 4,
-    title: "Paso 4: Red Vial Real y Modelos (GA · PSO · ACO)",
-    desc: "Al presionar el botón <strong>'Optimizar Ruta y Comparar Algoritmos'</strong>, Cursus descarga la topología vial con sentidos y velocidades vía Overpass API, resolviendo caminos mínimos con Dijkstra y optimizando la secuencia mediante Algoritmos Genéticos, Enjambre y Hormigas simultáneamente.",
+    title: "Paso 4: Algoritmos de Ruteo de Flotas (GA · PSO · ACO)",
+    desc: "Al presionar <strong>'Asignar y Optimizar Ruta de Despacho'</strong>, Cursus descarga la red vial real con límites de velocidad vía Overpass API, resolviendo caminos mínimos con Dijkstra y optimizando la secuencia mediante Algoritmos Genéticos, Enjambre y Hormigas en paralelo.",
     tab: "orders",
     highlightHub: false
   },
   {
     step: 5,
-    title: "Paso 5: Métricas Comparativas y Hoja de Ruta",
-    desc: "Al finalizar la optimización, la pestaña de <strong>Métricas</strong> despliega el algoritmo ganador, la curva de convergencia iterativa y el cronograma cronológico paso a paso con horario exacto de llegada a cada cliente y retorno seguro al Hub.",
+    title: "Paso 5: Hoja de Ruta del Conductor y Desglose SLA",
+    desc: "La pestaña de <strong>Métricas de Entrega</strong> presenta el algoritmo con menor kilometraje y consumo, la curva de convergencia y la hoja de ruta cronológica paso a paso con horario exacto de llegada a cada cliente y retorno a la estación.",
     tab: "results",
     highlightHub: false
   }
 ];
 
-let currentTourIndex = -1; // -1: Welcome card, 0 a 4: Pasos guiados
+let currentTourIndex = -1;
 
 function initTutorial() {
   const openBtn = document.getElementById("btn-open-tutorial");
@@ -550,7 +568,6 @@ function initTutorial() {
     }
   });
 
-  // Apertura automática en primera visita
   if (!localStorage.getItem("cursus_tutorial_seen")) {
     setTimeout(() => {
       openTutorial(false);
@@ -602,16 +619,14 @@ function setTourStep(index) {
     highlightHubMarker(stepData.highlightHub);
   }
 
-  // Actualizar indicadores tipo cápsula
   const indicators = document.querySelectorAll("#tut-progress-indicators .indicator-dot");
   indicators.forEach((dot, idx) => {
     dot.classList.toggle("active", idx === index);
   });
 
-  // Actualizar textos de botones de navegación
   const nextBtn = document.getElementById("btn-tour-next");
   if (index === TOUR_STEPS.length - 1) {
-    nextBtn.innerText = "¡Finalizar y Explorar!";
+    nextBtn.innerText = "¡Finalizar y Despachar!";
   } else {
     nextBtn.innerText = "Siguiente →";
   }
